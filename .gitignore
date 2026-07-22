@@ -1,6 +1,9 @@
 node_modules/
 dist/
+*.local
+.DS_Store
+capacitor-cordova-android-plugins/
 android/
 ios/
-.DS_Store
-*.local.*
+.pi/
+tmp/
