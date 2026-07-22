@@ -1,21 +1,30 @@
 # Broom 🧹
 
-HomeSync è una PWA che mi ero fatto per gestire le pulizie con la mia compagna.
-Volevo vedere se riuscivo a trasformarla in un'app per cellulare usando l'AI.
-Broom è il risultato.
+**Dai post-it passivo-aggressivi sul frigo a un'app mobile P2P — costruita con
+l'AI come mia tutor.**
 
-Funziona senza server: i dati stanno sul telefono e quando siete sulla stessa
-WiFi si sincronizzano da soli. Una volta inquadrato un QR per abbinare i telefoni,
-non ci pensi più.
+Tutto è iniziato con un problema banale: io e la mia compagna non
+ricordavamo mai chi avesse pulito cosa, e il frigo era pieno di bigliettini
+passivo-aggressivi. Così mi sono creato HomeSync, una PWA per gestire le pulizie.
 
-Per ora è alla frutta eh, ma gira.
+Poi ho pensato: "E se usassi questo progetto per testare le mie capacità con
+l'AI e trasformarlo in un'app per cellulare?" Non ero un mobile developer.
+Ma nel 2025 puoi sederti con Claude, GPT, e un sacco di caffè, e imparare
+facendo. Ogni riga della trasformazione — sync CRDT, abbinamento QR,
+persistenza offline — è stata scritta con AI pair programming. L'AI è stata
+la mia tutor, la mia code reviewer e la mia rubber duck.
 
-## Come gira
+**Questo repository è un fork di [HomeSync](https://github.com/Lukentony/homesync)**,
+l'app originale che mi ero fatto per le pulizie di casa. Il fork esiste perché
+volevo la libertà di sperimentare. Il codice non è perfetto, ma mi ha insegnato
+più di qualsiasi corso.
+
+## Build
 
 ```bash
 npm install
 npm run dev        # sviluppo web
-npm run build      # build per produzione
+npm run build      # build
 npx cap sync       # sync con Capacitor
 npx cap open android  # apri in Android Studio
 ```
@@ -23,10 +32,10 @@ npx cap open android  # apri in Android Studio
 ## Roba tecnica
 
 - **Frontend**: React, Tailwind, Vite
-- **Wrapper mobile**: Capacitor
-- **Sync**: CRDT (Automerge), auto quando i telefoni sono sulla stessa rete
+- **Wrapper**: Capacitor (Android)
+- **Sync**: CRDT (Automerge), automatica sulla stessa WiFi
 - **Test**: Vitest + fast-check
 
-## License
+## Licenza
 
 MIT — come l'originale HomeSync.
