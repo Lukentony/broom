@@ -8,17 +8,11 @@ Funziona senza server: i dati stanno sul telefono e quando siete sulla stessa
 WiFi si sincronizzano da soli. Una volta inquadrato un QR per abbinare i telefoni,
 non ci pensi più.
 
-Per ora è alla frutta eh, ma gira.
+## Scarica l'APK
 
-## Come gira
+👉 [**Scarica l'ultima versione**](https://github.com/Lukentony/broom/releases/latest)
 
-```bash
-npm install
-npm run dev        # sviluppo web
-npm run build      # build
-npx cap sync       # sync con Capacitor
-npx cap open android  # apri in Android Studio
-```
+Si installa come qualsiasi app Android. Nessun account, nessuna registrazione.
 
 ## Licenza
 
