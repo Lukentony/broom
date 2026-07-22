@@ -14,6 +14,7 @@ import SideDrawer from './components/SideDrawer';
 import UpdateBanner from './components/UpdateBanner';
 import OfflineBanner from './components/OfflineBanner';
 import useOnlineStatus from './hooks/useOnlineStatus';
+import { store } from './store';
 
 const SCHEMA_VERSION = 'broom_schema_v2.1';
 
@@ -45,6 +46,9 @@ export default function App() {
   const isOnline = useOnlineStatus();
 
   useEffect(() => {
+    // Inizializza storage nativo (Capacitor Filesystem) dopo il mount
+    store.initNativeStorage();
+
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/service-worker.js').then((reg) => {
         reg.addEventListener('updatefound', () => {

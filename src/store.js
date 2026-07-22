@@ -5,22 +5,37 @@
 import * as A from '@automerge/automerge';
 import { calculatePoints } from './logic/scoring.js';
 import { calculateNextDate, nextDueFromRecurrence } from './logic/scheduling.js';
+import { createStorageAdapter, STORAGE_KEYS } from './storage.js';
+import { todayISO, nowISO } from './helpers/dates.js';
+import { updateNotifications } from './services/notifications.js';
 
 // === Persistenza ===
 const STORAGE_KEY = 'broom_doc_v2';
 const SETTINGS_KEY = 'broom_settings';
 
+let _nativeAdapter = null;
 let saveTimer = null;
 function scheduleSave(doc) {
   if (saveTimer) clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
+  saveTimer = setTimeout(async () => {
     try {
       const serialized = A.save(doc);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(serialized)));
+      const data = JSON.stringify(Array.from(serialized));
+      localStorage.setItem(STORAGE_KEY, data);
+      if (_nativeAdapter) {
+        await _nativeAdapter.write(STORAGE_KEY, data);
+      }
     } catch (e) {
       console.error('Save failed:', e);
     }
   }, 500);
+}
+
+// Pulizia timer su reload / unload
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', () => {
+    if (saveTimer) clearTimeout(saveTimer);
+  });
 }
 
 function loadDoc() {
@@ -67,18 +82,7 @@ function completionId() {
   return `c_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function todayISO() {
-  // Usa data locale, non UTC
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
-function nowISO() {
-  return new Date().toISOString();
-}
+// todayISO() e nowISO() sono in helpers/dates.js
 
 function daysOverdue(task) {
   const today = new Date(todayISO());
@@ -105,7 +109,15 @@ function getActiveUsers(d) {
 function mutate(fn) {
   doc = A.change(doc, 'op', fn);
   scheduleSave(doc);
+  notifyChange();
   return doc;
+}
+
+function notifyChange() {
+  // Fire-and-forget: aggiorna le notifiche senza bloccare la mutazione
+  updateNotifications(store).catch(err => {
+    console.warn('Notification update failed:', err);
+  });
 }
 
 // === Store API (Promise-based, come api.js) ===
@@ -544,6 +556,29 @@ export const store = {
   /** Imposta l'utente corrente */
   setCurrentUser(userId) {
     localStorage.setItem('broom_user_id', String(userId));
+    return Promise.resolve({ success: true });
+  },
+
+  /** Inizializza storage nativo (Capacitor Filesystem) se disponibile */
+  async initNativeStorage() {
+    try {
+      const adapter = await createStorageAdapter();
+      if (adapter.isNative) {
+        const raw = await adapter.read(STORAGE_KEY);
+        if (raw) {
+          const arr = JSON.parse(raw);
+          const bytes = new Uint8Array(arr);
+          const loaded = A.load(bytes);
+          if (loaded) {
+            doc = loaded;
+            localStorage.setItem(STORAGE_KEY, raw);
+          }
+        }
+        _nativeAdapter = adapter;
+      }
+    } catch (e) {
+      console.warn('Native storage init failed:', e);
+    }
     return Promise.resolve({ success: true });
   },
 
