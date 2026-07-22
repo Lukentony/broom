@@ -16,4 +16,4 @@ Si installa come qualsiasi app Android. Nessun account, nessuna registrazione.
 
 ## Licenza
 
-MIT — come l'originale HomeSync.
+MIT - come l'originale HomeSync.
