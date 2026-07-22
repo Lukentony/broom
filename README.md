@@ -22,4 +22,4 @@ npx cap open android  # apri in Android Studio
 
 ## Licenza
 
-MIT — come l'originale HomeSync.
+MIT - come l'originale HomeSync.
