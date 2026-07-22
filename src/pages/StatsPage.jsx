@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { api } from '../api';
+import { store } from '../store';
 import { format, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { ChevronRight, History } from 'lucide-react';
@@ -9,7 +9,7 @@ export default function StatsPage() {
   const [history, setHistory] = useState([]);
 
   useEffect(() => {
-    api.getHistory(30).then(setHistory);
+    store.getHistory(30).then(setHistory);
   }, []);
 
   return (

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { api } from '../api';
+import { store } from '../store';
 import { format, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { CheckCircle2, Trash2, Download } from 'lucide-react';
@@ -12,7 +12,7 @@ export default function StoricaPage() {
 
   const fetchHistory = () => {
     setLoading(true);
-    api.getHistory(30)
+    store.getHistory(30)
       .then(data => {
         setHistory(data || []);
         setLoading(false);
@@ -26,7 +26,7 @@ export default function StoricaPage() {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Eliminare questo completamento? i punti verranno stornati.')) return;
-    await api.deleteHistoryItem(id);
+    await store.deleteHistoryItem(id);
     fetchHistory();
   };
 

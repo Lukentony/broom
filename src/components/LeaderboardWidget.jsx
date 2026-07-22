@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { api } from '../api';
+import { store } from '../store';
 import { Users, Trophy } from 'lucide-react';
 
 export default function LeaderboardWidget() {
   const [stats, setStats] = useState(null);
 
   useEffect(() => {
-    api.getStats().then(setStats);
+    store.getStats().then(setStats);
   }, []);
 
   if (!stats) return null;

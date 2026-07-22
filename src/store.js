@@ -4,7 +4,6 @@
 
 import * as A from '@automerge/automerge';
 import { calculatePoints } from './logic/scoring.js';
-import { determineNextPerformer } from './logic/assignment.js';
 import { calculateNextDate, nextDueFromRecurrence } from './logic/scheduling.js';
 
 // === Persistenza ===
@@ -69,7 +68,12 @@ function completionId() {
 }
 
 function todayISO() {
-  return new Date().toISOString().split('T')[0];
+  // Usa data locale, non UTC
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 function nowISO() {
@@ -202,7 +206,7 @@ export const store = {
         points_awarded: points,
         was_on_demand: false,
         was_automated: false,
-        is_shared,
+        is_shared: isShared,
         task_name: t.name,
         user_name: null, // verrà riempito lato getHistory
       };
@@ -231,15 +235,26 @@ export const store = {
 
   undoComplete(id) {
     mutate(d => {
-      // Rimuove l'ultimo completamento per questo task
-      const idx = [...d.completions].reverse().findIndex(c => c.task_id === id);
-      if (idx !== -1) {
-        const realIdx = d.completions.length - 1 - idx;
-        d.completions.splice(realIdx, 1);
-      }
-      // Ripristina la scadenza precedente? Per semplicità, ricalcola
       const task = d.tasks.find(t => t.id === id);
-      if (task) {
+      if (!task) return;
+
+      // Rimuove l'ultimo completamento per questo task
+      const revIdx = [...d.completions].reverse().findIndex(c => c.task_id === id);
+      if (revIdx === -1) return;
+
+      const realIdx = d.completions.length - 1 - revIdx;
+      d.completions.splice(realIdx, 1);
+
+      // Ripristina next_due_date allo stato precedente l'ultimo completamento
+      // Cerca un eventuale completamento precedente
+      const prevRevIdx = [...d.completions].reverse().findIndex(c => c.task_id === id);
+      if (prevRevIdx !== -1) {
+        // C'era già un completamento: ricalcola da quello (simula completeTask)
+        const prevRealIdx = d.completions.length - 1 - prevRevIdx;
+        const prevDate = d.completions[prevRealIdx].completed_at.split('T')[0];
+        task.next_due_date = nextDueFromRecurrence(task, prevDate);
+      } else {
+        // Nessun completamento precedente: inverte l'effetto dell'ultimo completamento
         task.next_due_date = calculateNextDate(task.next_due_date, -task.frequency_days);
       }
     });
@@ -368,14 +383,16 @@ export const store = {
       const totalPoints = userCompletions
         .reduce((sum, c) => sum + c.points_awarded, 0);
 
-      // Per compatibilità con api.getStats() del backend
-      // che usa user_name e user_id
+      // Compatibilità con api.getStats() — campi espliciti, niente spread
       return {
+        id: u.id,
+        name: u.name,
         user_id: u.id,
         user_name: u.name,
         weekly_points: weeklyPoints,
         total_points: totalPoints,
-        ...u,
+        emoji: u.emoji,
+        color: u.color,
       };
     });
 

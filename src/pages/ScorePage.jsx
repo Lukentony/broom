@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { api } from '../api';
+import { store } from '../store';
 import PageHeader from '../components/PageHeader';
 import { Trophy, History, Award, TrendingUp, ChevronRight } from 'lucide-react';
 import { clsx } from 'clsx';
@@ -15,8 +15,8 @@ export default function ScorePage() {
     async function fetchData() {
       try {
         const [statsData, historyData] = await Promise.all([
-          api.getStats(),
-          api.getHistory(7)
+          store.getStats(),
+          store.getHistory(7)
         ]);
         setStats(statsData);
         setHistory(historyData);

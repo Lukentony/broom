@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { api } from '../api';
+import { store } from '../store';
 
 export function useSettings() {
   const [settings, setSettings] = useState({ vacation_mode: 'false' });
@@ -7,7 +7,7 @@ export function useSettings() {
 
   const fetchSettings = useCallback(async () => {
     try {
-      const data = await api.getSettings();
+      const data = await store.getSettings();
       const settingsMap = data.reduce((acc, curr) => ({ ...acc, [curr.key]: curr.value }), {});
       setSettings(settingsMap);
     } catch (err) {
@@ -18,12 +18,12 @@ export function useSettings() {
   }, []);
 
   const toggleVacation = async (active) => {
-    await api.toggleVacation(active);
+    await store.toggleVacation(active);
     await fetchSettings();
   };
 
   const updateScoring = async (payload) => {
-    await api.patchScoring(payload);
+    await store.patchScoring(payload);
     await fetchSettings();
   };
 

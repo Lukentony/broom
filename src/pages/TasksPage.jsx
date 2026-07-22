@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { api } from '../api';
+import { store } from '../store';
 import TaskCard from '../components/TaskCard';
 import CompletionSheet from '../components/CompletionSheet';
 import PageHeader from '../components/PageHeader';
@@ -29,9 +29,9 @@ export default function TasksPage() {
   const fetchAll = useCallback(async () => {
     setLoading(true);
     const [tasksData, roomsData, statsData] = await Promise.all([
-      api.getTasks().catch(() => []),
-      api.getRooms().catch(() => []),
-      api.getStats().catch(() => ({ leaderboard: [] })),
+      store.getTasks().catch(() => []),
+      store.getRooms().catch(() => []),
+      store.getStats().catch(() => ({ leaderboard: [] })),
     ]);
     setTasks(tasksData || []);
     setRooms(roomsData || []);
@@ -53,7 +53,7 @@ export default function TasksPage() {
   };
 
   const handleConfirmComplete = async (taskId, theoretical) => {
-    await api.completeTask(taskId, theoretical);
+    await store.completeTask(taskId, theoretical);
     setSelectedTask(null);
     fetchAll();
     const task = tasks.find(t => t.id === taskId);
@@ -66,22 +66,22 @@ export default function TasksPage() {
     if (!undoToast) return;
     clearTimeout(undoToast.timer);
     setUndoToast(null);
-    await api.undoComplete(undoToast.taskId);
+    await store.undoComplete(undoToast.taskId);
     fetchAll();
   };
 
   const handleSaveTask = async (data) => {
     if (editTask?.id) {
-      await api.updateTask(editTask.id, data);
+      await store.updateTask(editTask.id, data);
     } else {
-      await api.createTask(data);
+      await store.createTask(data);
     }
     setEditTask(null);
     fetchAll();
   };
 
   const handleDeleteTask = async (id) => {
-    await api.deleteTask(id);
+    await store.deleteTask(id);
     setConfirmDelete(null);
     fetchAll();
   };

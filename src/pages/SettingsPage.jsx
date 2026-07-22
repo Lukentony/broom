@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSettings } from '../hooks/useSettings';
 import { Plane, FlaskConical, Settings, Layout, Users, Save, LogOut, ChevronRight, UserCircle, Award } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
-import { api } from '../api';
+import { store } from '../store';
 import { clsx } from 'clsx';
 
 export default function SettingsPage() {
@@ -26,7 +26,7 @@ export default function SettingsPage() {
   const currentUser = users.find(u => u.user_id.toString() === currentUserId);
 
   useEffect(() => {
-    api.getStats().then(data => setUsers(data.leaderboard || [])).catch(() => {});
+    store.getStats().then(data => setUsers(data.leaderboard || [])).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -72,7 +72,7 @@ export default function SettingsPage() {
     setGenerating(true);
     setGenerateResult(null);
     try {
-      const res = await api.generateTestData();
+      const res = await store.generateTestData();
       setGenerateResult(`Creati ${res.completions_created} completamenti di test ✨`);
     } catch (e) {
       setGenerateResult('Errore nella generazione ❌');
@@ -83,7 +83,7 @@ export default function SettingsPage() {
   const handleReset = async () => {
     if (!window.confirm('Reset completo: tutte le scadenze tornano a oggi, punti azzerati. Continuare?')) return;
     setResetting(true);
-    await api.resetTest().catch(() => {});
+    await store.resetTest().catch(() => {});
     setResetting(false);
   };
 
@@ -95,14 +95,14 @@ export default function SettingsPage() {
 
   const handleSavePrefs = async () => {
     setSavingPrefs(true);
-    await api.patchPreferences(prefs).catch(() => {});
+    await store.patchPreferences(prefs).catch(() => {});
     await refetch();
     setSavingPrefs(false);
   };
 
   const handleSaveWidgets = async () => {
     setSavingWidgets(true);
-    await api.patchWidgets({
+    await store.patchWidgets({
       widgets_order: widgets.order.join(','),
       widgets_hidden: widgets.hidden.join(',')
     }).catch(() => {});
@@ -114,8 +114,8 @@ export default function SettingsPage() {
 
   const handleSaveRename = async (newName) => {
     if (newName && newName !== userToRename.user_name) {
-      await api.renameUser(userToRename.user_id, newName).catch(() => {});
-      api.getStats().then(data => setUsers(data.leaderboard || [])).catch(() => {});
+      await store.renameUser(userToRename.user_id, newName).catch(() => {});
+      store.getStats().then(data => setUsers(data.leaderboard || [])).catch(() => {});
     }
     setUserToRename(null);
   };

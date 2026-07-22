@@ -3,30 +3,50 @@ import { store } from '../store';
 
 describe('Store Module (locale)', () => {
   beforeEach(() => {
-    // Pulisci localStorage per ogni test
     const keys = Object.keys(localStorage);
     keys.forEach(k => localStorage.removeItem(k));
-    // Ricarica doc seed
     return store._reload();
   });
+
+  // Setup: create a user and a task so tests are deterministic
+  async function seed() {
+    await store.addUser('TestUser');
+    await store.setCurrentUser(1);
+    const rooms = await store.getRooms();
+    const roomId = rooms[0]?.id || 1;
+    await store.createTask({
+      name: 'Seed task',
+      room_id: roomId,
+      frequency_days: 7,
+      difficulty: 3,
+    });
+  }
 
   it('should have getTasks method returning Promise', async () => {
     const tasks = await store.getTasks();
     expect(Array.isArray(tasks)).toBe(true);
   });
 
-  it('should have completeTask method returning Promise', async () => {
+  it('should complete a task and return points', async () => {
+    await seed();
     const tasks = await store.getTasks();
-    if (tasks.length > 0) {
-      const result = await store.completeTask(tasks[0].id, true);
-      expect(result).toHaveProperty('points');
-    }
+    const result = await store.completeTask(tasks[0].id, true);
+    expect(result).toHaveProperty('points');
+    expect(typeof result.points).toBe('number');
   });
 
-  it('should have getStats method', async () => {
+  it('should getStats with user_id and user_name', async () => {
+    await seed();
     const stats = await store.getStats();
     expect(stats).toHaveProperty('leaderboard');
     expect(Array.isArray(stats.leaderboard)).toBe(true);
+    if (stats.leaderboard.length > 0) {
+      const user = stats.leaderboard[0];
+      expect(user).toHaveProperty('user_id');
+      expect(user).toHaveProperty('user_name');
+      expect(user).toHaveProperty('weekly_points');
+      expect(user).toHaveProperty('total_points');
+    }
   });
 
   it('should have toggleVacation method', async () => {
@@ -98,11 +118,28 @@ describe('Store Module (locale)', () => {
     expect(scoring.scoring_split_shared).toBe('false');
   });
 
-  it('should handle complete on-demand', async () => {
+  it('should complete on-demand and return points', async () => {
+    await seed();
     const tasks = await store.getTasks();
-    if (tasks.length > 0) {
-      const result = await store.completeOnDemand(tasks[0].id);
-      expect(result).toHaveProperty('points');
-    }
+    const result = await store.completeOnDemand(tasks[0].id);
+    expect(result).toHaveProperty('points');
+    expect(typeof result.points).toBe('number');
+  });
+
+  it('should undo a completion and restore due date', async () => {
+    await seed();
+    const beforeTasks = await store.getTasks();
+    const taskBefore = beforeTasks.find(t => t.name === 'Seed task');
+    const originalDue = taskBefore.next_due_date;
+
+    await store.completeTask(taskBefore.id, true);
+    const afterCompleteTasks = await store.getTasks();
+    const afterComplete = afterCompleteTasks.find(t => t.id === taskBefore.id);
+    expect(afterComplete.next_due_date).not.toBe(originalDue);
+
+    await store.undoComplete(taskBefore.id);
+    const afterUndoTasks = await store.getTasks();
+    const afterUndo = afterUndoTasks.find(t => t.id === taskBefore.id);
+    expect(afterUndo.next_due_date).toBe(originalDue);
   });
 });

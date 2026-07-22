@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { parseISO, isSameDay, isToday, isPast, isTomorrow } from 'date-fns';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
-import { api } from '../api';
+import { store } from '../store';
 import PageHeader from '../components/PageHeader';
 import { clsx } from 'clsx';
 
@@ -28,8 +28,8 @@ export default function CalendarPage() {
 
   useEffect(() => {
     Promise.all([
-      api.getTasks().catch(() => []),
-      api.getRooms().catch(() => []),
+      store.getTasks().catch(() => []),
+      store.getRooms().catch(() => []),
     ]).then(([t, r]) => {
       setTasks(t || []);
       setRooms(r || []);

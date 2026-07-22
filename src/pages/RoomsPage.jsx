@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { api } from '../api';
+import { store } from '../store';
 import PageHeader from '../components/PageHeader';
 import CircularProgress from '../components/CircularProgress';
 import { Plus, X, Pencil, Trash2, Home, Bath, ChefHat, Sofa, CheckSquare, BookOpen } from 'lucide-react';
@@ -23,7 +23,7 @@ export default function RoomsPage() {
 
   const fetchRooms = useCallback(async () => {
     setLoading(true);
-    const data = await api.getRooms().catch(() => []);
+    const data = await store.getRooms().catch(() => []);
     setRooms(data || []);
     setLoading(false);
   }, []);
@@ -32,19 +32,19 @@ export default function RoomsPage() {
 
   const handleSave = async (data) => {
     if (roomForm?.id) {
-      await api.updateRoom(roomForm.id, data);
+      await store.updateRoom(roomForm.id, data);
     } else {
-      await api.createRoom(data);
+      await store.createRoom(data);
     }
     setRoomForm(null);
     fetchRooms();
   };
 
   const handleDelete = async (id) => {
-    const res = await api.deleteRoom(id, false);
+    const res = await store.deleteRoom(id, false);
     if (res?.status === 'conflict') {
       const ok = window.confirm('Questa stanza ha task attivi. Eliminarli tutti?');
-      if (ok) await api.deleteRoom(id, true);
+      if (ok) await store.deleteRoom(id, true);
     }
     setConfirmDelete(null);
     fetchRooms();

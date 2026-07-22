@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { api } from '../api';
+import { store } from '../store';
 
 export function useTasks() {
   const [tasks, setTasks] = useState([]);
@@ -9,7 +9,7 @@ export function useTasks() {
   const fetchTasks = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await api.getDueTasks();
+      const data = await store.getDueTasks();
       setTasks(data);
       setError(null);
     } catch (err) {

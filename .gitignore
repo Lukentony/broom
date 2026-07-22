@@ -5,3 +5,4 @@ dist/
 capacitor-cordova-android-plugins/
 android/
 ios/
+.pi/\ntmp/

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTasks } from '../hooks/useTasks';
 import { usePolling } from '../hooks/usePolling';
-import { api } from '../api';
+import { store } from '../store';
 import { Trophy, ChevronRight } from 'lucide-react';
 import TaskCard from '../components/TaskCard';
 import RoomCard from '../components/RoomCard';
@@ -22,9 +22,9 @@ export default function Dashboard() {
   usePolling(refetch);
 
   useEffect(() => {
-    api.getRooms().then(setRooms).catch(() => setRooms([]));
-    api.getStats().then(setStats).catch(() => setStats({ leaderboard: [] }));
-    api.getWidgets().then(data => {
+    store.getRooms().then(setRooms).catch(() => setRooms([]));
+    store.getStats().then(setStats).catch(() => setStats({ leaderboard: [] }));
+    store.getWidgets().then(data => {
       if (data.widgets_order) setWidgetsOrder(data.widgets_order.split(','));
       if (data.widgets_hidden) setWidgetsHidden(data.widgets_hidden.split(','));
     }).catch(() => {
@@ -45,11 +45,11 @@ export default function Dashboard() {
   };
 
   const handleConfirmComplete = async (taskId, theoretical) => {
-    await api.completeTask(taskId, theoretical);
+    await store.completeTask(taskId, theoretical);
     setSelectedTask(null);
     refetch();
-    api.getRooms().then(setRooms).catch(() => {});
-    api.getStats().then(setStats).catch(() => {}); // Refresh stats too
+    store.getRooms().then(setRooms).catch(() => {});
+    store.getStats().then(setStats).catch(() => {}); // Refresh stats too
   };
 
   const urgentCount = tasks.filter(t => {

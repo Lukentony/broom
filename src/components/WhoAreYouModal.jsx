@@ -1,14 +1,23 @@
 import { useState, useEffect } from 'react';
 import { clsx } from 'clsx';
 import { User } from 'lucide-react';
-import { api } from '../api';
+import { store } from '../store';
 
 export default function WhoAreYouModal({ onSelect }) {
   const [loading, setLoading] = useState(null);
   const [users, setUsers] = useState([]);
 
   useEffect(() => {
-    api.getStats().then(data => setUsers(data.leaderboard || [])).catch(() => {});
+    store.getStats().then(data => {
+      const list = data.leaderboard || [];
+      setUsers(list);
+      // Se non ci sono utenti, reindirizza alla creazione
+      if (list.length === 0) {
+        window.location.href = '/setup';
+      }
+    }).catch(() => {
+      window.location.href = '/setup';
+    });
   }, []);
 
   const handleSelect = (id) => {
