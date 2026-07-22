@@ -12,13 +12,17 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@automerge/automerge": "^3.3.2",
+    "@automerge/automerge-repo": "^2.5.6",
+    "@automerge/automerge-repo-network-websocket": "^2.5.6",
+    "@automerge/automerge-repo-storage-indexeddb": "^2.5.6",
+    "clsx": "^2.1.0",
+    "date-fns": "^3.3.1",
+    "lucide-react": "^0.330.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.22.0",
-    "lucide-react": "^0.330.0",
-    "clsx": "^2.1.0",
-    "tailwind-merge": "^2.2.1",
-    "date-fns": "^3.3.1"
+    "tailwind-merge": "^2.2.1"
   },
   "devDependencies": {
     "@types/react": "^18.2.55",
