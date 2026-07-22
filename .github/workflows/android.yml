@@ -20,7 +20,7 @@ jobs:
       - uses: actions/setup-java@v5
         with:
           distribution: 'zulu'
-          java-version: 17
+          java-version: 21
       - uses: android-actions/setup-android@v4
       - run: npx cap add android
       - run: npx cap sync android
