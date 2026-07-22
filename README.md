@@ -1,48 +1,32 @@
-# Broom
+# Broom 🧹
 
-**Broom** è un'app mobile local-first per la gestione collaborativa delle pulizie domestiche.
-Progettata per coppie e coinquilini: tengo traccia dei task, assegna i compiti, calcola
-punteggi e mostra chi sta facendo la propria parte — tutto senza un server cloud.
+HomeSync è una PWA che mi ero fatto per gestire le pulizie con la mia compagna.
+Volevo vedere se riuscivo a trasformarla in un'app per cellulare usando l'AI.
+Broom è il risultato.
 
-## Architettura
+Funziona senza server: i dati stanno sul telefono e quando siete sulla stessa
+WiFi si sincronizzano da soli. Una volta inquadrato un QR per abbinare i telefoni,
+non ci pensi più.
 
-> Local-first con CRDT (Automerge). Nessun backend. Sync P2P diretta tra telefoni.
+Per ora è alla frutta eh, ma gira.
 
-- **Stato = documento**: lo stato dell'app è un documento Automerge (CRDT) salvato
-  localmente sul telefono. Niente database, niente migrazioni.
-- **Dati derivati**: punteggi, scadenze e assegnazioni sono calcolati al volo dai
-  fatti (completamenti, task, utenti). Il merge è sempre banale.
-- **Sync automatica**: pairing QR una tantum, poi sync automatica via LAN.
-  L'utente non fa nulla.
-- **Offline-first**: tutto funziona senza connessione. La sync è solo per
-  allinearsi con l'altro telefono.
-
-## Stack
-
-| Layer | Tecnologia |
-|-------|-----------|
-| UI | React 18, Tailwind CSS, Lucide React |
-| Bundler | Vite |
-| Mobile wrapper | Capacitor (Android, iOS) |
-| CRDT | Automerge |
-| Test | Vitest, fast-check (property-based) |
-
-## Quick Start
+## Come gira
 
 ```bash
 npm install
-npm run dev       # sviluppo web su localhost:3000
-npm run build     # build per produzione
-npx cap sync      # sync con Capacitor
-npx cap open android  # apri Android Studio
+npm run dev        # sviluppo web
+npm run build      # build per produzione
+npx cap sync       # sync con Capacitor
+npx cap open android  # apri in Android Studio
 ```
 
-## Perché Broom?
+## Roba tecnica
 
-Broom nasce da HomeSync, un progetto che usavo con la mia compagna per gestire
-le pulizie di casa. L'ho riscritto da zero come app mobile local-first per
-imparare CRDT e sync P2P — ed è finito nel portfolio.
+- **Frontend**: React, Tailwind, Vite
+- **Wrapper mobile**: Capacitor
+- **Sync**: CRDT (Automerge), auto quando i telefoni sono sulla stessa rete
+- **Test**: Vitest + fast-check
 
 ## License
 
-MIT
+MIT — come l'originale HomeSync.

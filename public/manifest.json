@@ -17,5 +17,6 @@
   "start_url": ".",
   "display": "standalone",
   "theme_color": "#2563eb",
-  "background_color": "#f8fafc"
+  "background_color": "#f8fafc",
+  "description": "App per le pulizie di casa, fork di HomeSync trasformato con AI."
 }
