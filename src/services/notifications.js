@@ -62,6 +62,20 @@ export async function requestPermissions() {
 }
 
 /**
+ * Controlla lo stato attuale dei permessi senza richiederli.
+ * @returns {Promise<'granted'|'denied'|'unknown'>}
+ */
+export async function checkPermissions() {
+  if (!(await ensureInit())) return 'unknown';
+  try {
+    const perm = await LocalNotifications.checkPermissions();
+    return perm.display === 'granted' ? 'granted' : perm.display === 'denied' ? 'denied' : 'unknown';
+  } catch {
+    return 'unknown';
+  }
+}
+
+/**
  * Programma la notifica mattutina (8:00) con il numero di faccende in scadenza.
  * Se dueCount <= 0, cancella la notifica mattutina.
  */

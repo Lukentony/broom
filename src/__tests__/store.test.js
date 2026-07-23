@@ -16,7 +16,7 @@ describe('Store Module (locale)', () => {
     const roomId = rooms[0]?.id || 1;
     await store.createTask({
       name: 'Seed task',
-      room_id: roomId,
+      room_ids: [roomId],
       frequency_days: 7,
       difficulty: 3,
     });
@@ -59,14 +59,96 @@ describe('Store Module (locale)', () => {
     const roomId = rooms[0]?.id || 1;
     await store.createTask({
       name: 'Test task',
-      room_id: roomId,
+      room_ids: [roomId],
       frequency_days: 7,
       difficulty: 3,
     });
     const tasks = await store.getTasks();
     const created = tasks.find(t => t.name === 'Test task');
     expect(created).toBeDefined();
-    expect(created.room_id).toBe(roomId);
+    expect(created.room_ids).toEqual([roomId]);
+  });
+
+  it('should support a task assigned to multiple rooms', async () => {
+    const rooms = await store.getRooms();
+    const roomIds = rooms.slice(0, 2).map(r => r.id);
+    await store.createTask({
+      name: 'Multi-room task',
+      room_ids: roomIds,
+      frequency_days: 7,
+      difficulty: 2,
+    });
+    const tasks = await store.getTasks();
+    const created = tasks.find(t => t.name === 'Multi-room task');
+    expect(created.room_ids).toEqual(roomIds);
+  });
+
+  it('should set next_due_date according to frequency_days on creation, not always today', async () => {
+    const rooms = await store.getRooms();
+    const roomId = rooms[0]?.id || 1;
+    await store.createTask({
+      name: 'Weekly task',
+      room_ids: [roomId],
+      frequency_days: 7,
+      difficulty: 2,
+    });
+    const tasks = await store.getTasks();
+    const created = tasks.find(t => t.name === 'Weekly task');
+    const today = new Date().toISOString().split('T')[0];
+    expect(created.next_due_date).not.toBe(today);
+    const expected = new Date();
+    expected.setDate(expected.getDate() + 7);
+    expect(created.next_due_date).toBe(expected.toISOString().split('T')[0]);
+  });
+
+  it('should keep next_due_date at today when frequency_days is 0 (una tantum)', async () => {
+    const rooms = await store.getRooms();
+    const roomId = rooms[0]?.id || 1;
+    await store.createTask({
+      name: 'One-off task',
+      room_ids: [roomId],
+      frequency_days: 0,
+      difficulty: 2,
+    });
+    const tasks = await store.getTasks();
+    const created = tasks.find(t => t.name === 'One-off task');
+    const today = new Date().toISOString().split('T')[0];
+    expect(created.next_due_date).toBe(today);
+  });
+
+  it('should recompute next_due_date when frequency_days changes on update', async () => {
+    await seed();
+    const tasks = await store.getTasks();
+    const task = tasks.find(t => t.name === 'Seed task');
+    await store.updateTask(task.id, { frequency_days: 14 });
+    const updatedTasks = await store.getTasks();
+    const updated = updatedTasks.find(t => t.id === task.id);
+    const expected = new Date();
+    expected.setDate(expected.getDate() + 14);
+    expect(updated.next_due_date).toBe(expected.toISOString().split('T')[0]);
+  });
+
+  it('should compute next_performer_id for ALTERNATING tasks after completion', async () => {
+    const userA = await store.addUser('Alice');
+    const userB = await store.addUser('Bob');
+    await store.setCurrentUser(userA.id);
+    const rooms = await store.getRooms();
+    const roomId = rooms[0]?.id || 1;
+    await store.createTask({
+      name: 'Alternating task',
+      room_ids: [roomId],
+      frequency_days: 7,
+      difficulty: 2,
+      assignment_type: 'ALTERNATING',
+    });
+    const tasks = await store.getTasks();
+    const task = tasks.find(t => t.name === 'Alternating task');
+    expect(task.next_performer_id).toBe(userA.id);
+
+    await store.completeTask(task.id, false);
+    const afterTasks = await store.getTasks();
+    const after = afterTasks.find(t => t.id === task.id);
+    expect(after.next_performer_id).toBe(userB.id);
   });
 
   it('should get rooms with completion percentage', async () => {

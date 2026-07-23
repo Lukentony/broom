@@ -44,10 +44,11 @@ function daysLabel(dueDate) {
   return `tra ${d}g`;
 }
 
-export default function TaskCard({ task, roomName, onComplete, onEdit }) {
+export default function TaskCard({ task, roomNames, performerName, onComplete, onEdit }) {
   const dueDate = parseISO(task.next_due_date);
   const urgency = getUrgency(dueDate);
   const s = URGENCY[urgency];
+  const roomLabel = roomNames && roomNames.length > 0 ? roomNames.join(', ') : null;
 
   return (
     <div
@@ -67,12 +68,17 @@ export default function TaskCard({ task, roomName, onComplete, onEdit }) {
             <Clock className="w-3 h-3" />
             {daysLabel(dueDate)}
           </span>
-          {roomName && (
-            <span className="text-xs text-slate-300">· {roomName}</span>
+          {roomLabel && (
+            <span className="text-xs text-slate-300">· {roomLabel}</span>
           )}
           <span className="text-xs text-slate-300">
             · {task.frequency_days === 0 ? 'una tantum' : `ogni ${task.frequency_days}g`} · {task.assignment_type === 'TOGETHER' ? 'Insieme' : task.assignment_type === 'FIXED_A' ? 'Fisso A' : task.assignment_type === 'FIXED_B' ? 'Fisso B' : task.assignment_type === 'ALTERNATING' ? 'Alternato' : 'Chiunque'}
           </span>
+          {performerName && (
+            <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase bg-indigo-100 text-indigo-700">
+              Tocca a {performerName}
+            </span>
+          )}
         </div>
       </div>
 

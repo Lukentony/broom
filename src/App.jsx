@@ -11,6 +11,7 @@ import ScorePage from './pages/ScorePage';
 import OnboardingPage from './pages/OnboardingPage';
 import WhoAreYouModal from './components/WhoAreYouModal';
 import SideDrawer from './components/SideDrawer';
+import BottomNav from './components/BottomNav';
 import UpdateBanner from './components/UpdateBanner';
 import OfflineBanner from './components/OfflineBanner';
 import useOnlineStatus from './hooks/useOnlineStatus';
@@ -36,6 +37,7 @@ function AppLayout() {
         <Route path="*"           element={<Navigate to="/" replace />} />
       </Routes>
       {!isSetup && <SideDrawer />}
+      {!isSetup && <BottomNav />}
     </>
   );
 }

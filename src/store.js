@@ -5,6 +5,7 @@
 import * as A from '@automerge/automerge';
 import { calculatePoints } from './logic/scoring.js';
 import { calculateNextDate, nextDueFromRecurrence } from './logic/scheduling.js';
+import { determineNextPerformer } from './logic/assignment.js';
 import { createStorageAdapter, STORAGE_KEYS } from './storage.js';
 import { todayISO, nowISO } from './helpers/dates.js';
 import { updateNotifications } from './services/notifications.js';
@@ -104,6 +105,18 @@ function getActiveUsers(d) {
   return d.users.filter(u => u.is_active !== false);
 }
 
+// Legacy: task salvati prima del passaggio a multi-stanza avevano `room_id`
+// singolo invece di `room_ids`. Normalizza in lettura, mai in scrittura.
+function getRoomIds(task) {
+  if (Array.isArray(task.room_ids)) return task.room_ids;
+  return task.room_id != null ? [task.room_id] : [];
+}
+
+function getUserAB(d) {
+  const active = getActiveUsers(d);
+  return { userAId: active[0]?.id ?? null, userBId: active[1]?.id ?? null };
+}
+
 // --- Mutazioni (ritornano il doc aggiornato) ---
 
 function mutate(fn) {
@@ -139,19 +152,28 @@ export const store = {
   createTask(data) {
     mutate(d => {
       const id = nextId();
+      const assignmentType = data.assignment_type || 'ANY';
+      const { userAId, userBId } = getUserAB(d);
+      const roomIds = Array.isArray(data.room_ids)
+        ? data.room_ids
+        : (data.room_id != null ? [data.room_id] : []);
       const task = {
         id,
-        room_id: data.room_id,
+        room_ids: roomIds,
         name: data.name,
         frequency_days: data.frequency_days,
         difficulty: data.difficulty,
-        assignment_type: data.assignment_type || 'ANY',
+        assignment_type: assignmentType,
         grace_period_days: data.grace_period_days || 0,
-        next_due_date: todayISO(),
+        // La prima scadenza rispetta la frequenza scelta invece di essere
+        // sempre "oggi" (frequency_days=0 → calculateNextDate non sposta la
+        // data, quindi "una tantum" resta comunque dovuto subito).
+        next_due_date: calculateNextDate(todayISO(), data.frequency_days),
         is_active: true,
         is_quick_action: false,
         tags: data.tags || null,
         last_performer_id: null,
+        next_performer_id: determineNextPerformer(assignmentType, null, userAId, userBId),
         created_at: nowISO(),
       };
       d.tasks.push(task);
@@ -164,8 +186,16 @@ export const store = {
       const task = d.tasks.find(t => t.id === id);
       if (!task) return;
       if (data.name !== undefined) task.name = data.name;
-      if (data.room_id !== undefined) task.room_id = data.room_id;
-      if (data.frequency_days !== undefined) task.frequency_days = data.frequency_days;
+      if (data.room_ids !== undefined) task.room_ids = data.room_ids;
+      else if (data.room_id !== undefined) task.room_ids = [data.room_id];
+      if (data.frequency_days !== undefined && data.frequency_days !== task.frequency_days) {
+        // Cambiare la frequenza deve avere effetto subito, non solo dopo il
+        // prossimo completamento — altrimenti sembra che non faccia nulla.
+        task.frequency_days = data.frequency_days;
+        task.next_due_date = calculateNextDate(todayISO(), data.frequency_days);
+      } else if (data.frequency_days !== undefined) {
+        task.frequency_days = data.frequency_days;
+      }
       if (data.difficulty !== undefined) task.difficulty = data.difficulty;
       if (data.assignment_type !== undefined) task.assignment_type = data.assignment_type;
       if (data.tags !== undefined) task.tags = data.tags;
@@ -227,8 +257,10 @@ export const store = {
       // Ricalcola prossima scadenza
       t.next_due_date = nextDueFromRecurrence(t, baseDate);
 
-      // Aggiorna ultimo esecutore
+      // Aggiorna ultimo esecutore e calcola a chi tocca il prossimo giro
       t.last_performer_id = userId;
+      const { userAId, userBId } = getUserAB(d);
+      t.next_performer_id = determineNextPerformer(t.assignment_type, userId, userAId, userBId);
     });
 
     return Promise.resolve({ points });
@@ -330,11 +362,12 @@ export const store = {
     const rooms = doc.rooms
       .filter(r => r.is_active !== false)
       .map(r => {
-        // Calcola percentuale completamento
-        const roomTasks = doc.tasks.filter(t => t.room_id === r.id && t.is_active !== false);
-        const completed = roomTasks.filter(t => t.next_due_date >= todayISO()); // aggiornato oggi o futuro = ok
+        // Percentuale di task "in regola" (non in ritardo) nella stanza —
+        // NON è una percentuale di task mai completati almeno una volta.
+        const roomTasks = doc.tasks.filter(t => getRoomIds(t).includes(r.id) && t.is_active !== false);
+        const onTrack = roomTasks.filter(t => t.next_due_date >= todayISO());
         const completion_percentage = roomTasks.length > 0
-          ? Math.round((completed.length / roomTasks.length) * 100)
+          ? Math.round((onTrack.length / roomTasks.length) * 100)
           : null;
         return { ...r, completion_percentage };
       });
@@ -367,7 +400,7 @@ export const store = {
   },
 
   deleteRoom(id, force = false) {
-    const hasTasks = doc.tasks.some(t => t.room_id === id && t.is_active !== false);
+    const hasTasks = doc.tasks.some(t => getRoomIds(t).includes(id) && t.is_active !== false);
     if (hasTasks && !force) {
       return Promise.resolve({ status: 'conflict', message: 'Room has active tasks' });
     }
@@ -376,7 +409,13 @@ export const store = {
       if (room) room.is_active = false;
       if (force) {
         d.tasks.forEach(t => {
-          if (t.room_id === id) t.is_active = false;
+          const ids = getRoomIds(t);
+          if (!ids.includes(id)) return;
+          // Un task può appartenere a più stanze: rimuovi solo questa. Se
+          // restava l'unica, il task perde tutte le stanze e va disattivato.
+          const remaining = ids.filter(rid => rid !== id);
+          t.room_ids = remaining;
+          if (remaining.length === 0) t.is_active = false;
         });
       }
     });

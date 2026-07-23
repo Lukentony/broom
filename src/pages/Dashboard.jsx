@@ -34,6 +34,7 @@ export default function Dashboard() {
   }, []);
 
   const roomMap = Object.fromEntries(rooms.map(r => [r.id, r.name]));
+  const userMap = Object.fromEntries((stats?.leaderboard || []).map(u => [u.user_id, u.user_name]));
 
   const handleCompleteRequest = (task) => {
     const today = new Date().toISOString().split('T')[0];
@@ -96,7 +97,8 @@ export default function Dashboard() {
               <TaskCard
                 key={task.id}
                 task={task}
-                roomName={roomMap[task.room_id]}
+                roomNames={(task.room_ids || []).map(id => roomMap[id]).filter(Boolean)}
+                performerName={task.next_performer_id != null ? userMap[task.next_performer_id] : null}
                 onComplete={() => handleCompleteRequest(task)}
                 onEdit={() => navigate('/tasks')}
               />
@@ -120,7 +122,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="max-w-md mx-auto p-4 space-y-5 pb-8">
+    <div className="max-w-md mx-auto p-4 space-y-5 pb-24">
       <PageHeader
         title="Broom"
         subtitle={urgentCount > 0 ? `${urgentCount} task urgenti` : 'Tutto in ordine ✨'}

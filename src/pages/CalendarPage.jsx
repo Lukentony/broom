@@ -56,7 +56,7 @@ export default function CalendarPage() {
   const selectedTasks = selectedDay ? tasksForDay(selectedDay) : [];
 
   return (
-    <div className="max-w-md mx-auto p-4 space-y-4 pb-8">
+    <div className="max-w-md mx-auto p-4 space-y-4 pb-24">
       <PageHeader title="Calendario" subtitle="Prossime scadenze" />
 
       {/* Navigazione mese */}
@@ -163,8 +163,10 @@ export default function CalendarPage() {
                 <div className={clsx('w-2 h-8 rounded-full flex-shrink-0', getDayColor(parseISO(task.next_due_date)))} />
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-slate-800 truncate text-sm">{task.name}</p>
-                  {roomMap[task.room_id] && (
-                    <p className="text-xs text-slate-400">{roomMap[task.room_id]}</p>
+                  {(task.room_ids || []).map(id => roomMap[id]).filter(Boolean).length > 0 && (
+                    <p className="text-xs text-slate-400">
+                      {(task.room_ids || []).map(id => roomMap[id]).filter(Boolean).join(', ')}
+                    </p>
                   )}
                 </div>
               </div>

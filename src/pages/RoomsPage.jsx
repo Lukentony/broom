@@ -51,7 +51,7 @@ export default function RoomsPage() {
   };
 
   return (
-    <div className="max-w-md mx-auto p-4 space-y-4 pb-8">
+    <div className="max-w-md mx-auto p-4 space-y-4 pb-24">
       <PageHeader title="Stanze" subtitle={`${rooms.length} stanze attive`} />
 
       {loading && <div className="text-center py-10 text-slate-400">Caricamento...</div>}
@@ -73,7 +73,7 @@ export default function RoomsPage() {
                   <h3 className="font-bold text-slate-800">{room.name}</h3>
                   <p className="text-xs text-slate-400">
                     {room.completion_percentage != null
-                      ? `${Math.round(room.completion_percentage)}% completato`
+                      ? `${Math.round(room.completion_percentage)}% in regola`
                       : 'Nessun task'}
                   </p>
                 </div>
@@ -109,7 +109,7 @@ export default function RoomsPage() {
       {/* FAB */}
       <button
         onClick={() => setRoomForm({})}
-        className="fixed bottom-8 right-4 w-14 h-14 bg-primary text-white rounded-full shadow-lg shadow-primary/30 flex items-center justify-center active:scale-95 transition-transform z-40"
+        className="fixed bottom-24 right-4 w-14 h-14 bg-primary text-white rounded-full shadow-lg shadow-primary/30 flex items-center justify-center active:scale-95 transition-transform z-40"
       >
         <Plus className="w-7 h-7" />
       </button>

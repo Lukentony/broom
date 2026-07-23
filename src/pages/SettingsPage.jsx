@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useSettings } from '../hooks/useSettings';
-import { Plane, FlaskConical, Settings, Layout, Users, Save, LogOut, ChevronRight, UserCircle, Award } from 'lucide-react';
+import { Plane, FlaskConical, Settings, Layout, Users, Save, LogOut, ChevronRight, UserCircle, Award, Bell, UserPlus } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import { store } from '../store';
+import { requestPermissions, checkPermissions } from '../services/notifications';
 import { clsx } from 'clsx';
+import pkg from '../../package.json';
 
 export default function SettingsPage() {
   const { settings, loading, toggleVacation, updateScoring, refetch } = useSettings();
@@ -25,8 +27,16 @@ export default function SettingsPage() {
   const currentUserId = localStorage.getItem('broom_user_id');
   const currentUser = users.find(u => u.user_id.toString() === currentUserId);
 
+  const [notifStatus, setNotifStatus] = useState('unknown'); // unknown | granted | denied
+  const [notifRequesting, setNotifRequesting] = useState(false);
+
+  const [addingUser, setAddingUser] = useState(false);
+  const [newUserName, setNewUserName] = useState('');
+  const [savingNewUser, setSavingNewUser] = useState(false);
+
   useEffect(() => {
     store.getStats().then(data => setUsers(data.leaderboard || [])).catch(() => {});
+    checkPermissions().then(setNotifStatus).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -110,6 +120,23 @@ export default function SettingsPage() {
     setSavingWidgets(false);
   };
 
+  const handleRequestNotifications = async () => {
+    setNotifRequesting(true);
+    const granted = await requestPermissions().catch(() => false);
+    setNotifStatus(granted ? 'granted' : 'denied');
+    setNotifRequesting(false);
+  };
+
+  const handleAddUser = async () => {
+    if (!newUserName.trim()) return;
+    setSavingNewUser(true);
+    await store.addUser(newUserName.trim()).catch(() => {});
+    setNewUserName('');
+    setAddingUser(false);
+    setSavingNewUser(false);
+    store.getStats().then(data => setUsers(data.leaderboard || [])).catch(() => {});
+  };
+
   const [userToRename, setUserToRename] = useState(null);
 
   const handleSaveRename = async (newName) => {
@@ -170,7 +197,7 @@ export default function SettingsPage() {
           {users.map(u => (
             <div key={u.user_id} className="flex justify-between items-center p-3 hover:bg-slate-50 rounded-2xl transition-colors group">
               <span className="font-bold text-slate-700 text-sm">{u.user_name}</span>
-              <button 
+              <button
                 onClick={() => setUserToRename(u)}
                 className="text-xs text-indigo-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity"
               >
@@ -178,6 +205,67 @@ export default function SettingsPage() {
               </button>
             </div>
           ))}
+        </div>
+
+        {addingUser ? (
+          <div className="flex items-center gap-2 pt-2">
+            <input
+              type="text"
+              value={newUserName}
+              onChange={e => setNewUserName(e.target.value)}
+              placeholder="Nome nuovo utente"
+              autoFocus
+              disabled={savingNewUser}
+              className="flex-1 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+            />
+            <button
+              onClick={handleAddUser}
+              disabled={savingNewUser || !newUserName.trim()}
+              className="px-4 py-2.5 bg-primary text-white text-xs font-black rounded-xl disabled:opacity-50"
+            >
+              Salva
+            </button>
+            <button
+              onClick={() => { setAddingUser(false); setNewUserName(''); }}
+              className="px-3 py-2.5 bg-slate-100 text-slate-500 text-xs font-black rounded-xl"
+            >
+              Annulla
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setAddingUser(true)}
+            className="w-full flex items-center justify-center gap-2 py-2.5 text-indigo-600 bg-indigo-50 rounded-2xl font-black text-xs uppercase tracking-widest active:scale-[0.98] transition-all"
+          >
+            <UserPlus size={14} />
+            Aggiungi utente
+          </button>
+        )}
+      </section>
+
+      {/* Notifiche */}
+      <section className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className={clsx('p-3 rounded-2xl', notifStatus === 'granted' ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400')}>
+              <Bell className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="font-bold text-slate-800 tracking-tight">Notifiche</p>
+              <p className="text-[10px] text-slate-400 font-medium">
+                {notifStatus === 'granted' ? 'Attive' : notifStatus === 'denied' ? 'Negate dal sistema' : 'Promemoria mattina/sera'}
+              </p>
+            </div>
+          </div>
+          {notifStatus !== 'granted' && (
+            <button
+              onClick={handleRequestNotifications}
+              disabled={notifRequesting}
+              className="text-xs font-black text-primary bg-primary/10 px-4 py-2 rounded-xl active:scale-95 transition-transform disabled:opacity-50"
+            >
+              {notifRequesting ? '...' : 'Attiva'}
+            </button>
+          )}
         </div>
       </section>
 
@@ -370,7 +458,7 @@ export default function SettingsPage() {
       <div className="text-center pt-8">
         <p className="text-[10px] text-slate-300 font-bold uppercase tracking-widest leading-loose">
           Broom Ecosystem<br/>
-          <span className="opacity-50">v2.1.0 • Stable Build</span>
+          <span className="opacity-50">v{pkg.version}</span>
         </p>
       </div>
 

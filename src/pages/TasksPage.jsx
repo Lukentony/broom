@@ -3,7 +3,7 @@ import { store } from '../store';
 import TaskCard from '../components/TaskCard';
 import CompletionSheet from '../components/CompletionSheet';
 import PageHeader from '../components/PageHeader';
-import { Plus, X, Star, ChevronDown } from 'lucide-react';
+import { Plus, X, Star } from 'lucide-react';
 import { clsx } from 'clsx';
 
 const FREQ_PRESETS = [
@@ -42,6 +42,7 @@ export default function TasksPage() {
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
   const roomMap = Object.fromEntries(rooms.map(r => [r.id, r.name]));
+  const userMap = Object.fromEntries(users.map(u => [u.user_id, u.user_name]));
 
   const handleCompleteRequest = (task) => {
     const today = new Date().toISOString().split('T')[0];
@@ -95,7 +96,7 @@ export default function TasksPage() {
   })();
 
   return (
-    <div className="max-w-md mx-auto p-4 space-y-4 pb-8">
+    <div className="max-w-md mx-auto p-4 space-y-4 pb-24">
       <PageHeader title="Task" subtitle={`${tasks.length} task attivi`} />
 
       <div className="flex bg-slate-100 p-1 rounded-xl">
@@ -113,7 +114,8 @@ export default function TasksPage() {
               <TaskCard
                 key={task.id}
                 task={task}
-                roomName={roomMap[task.room_id]}
+                roomNames={(task.room_ids || []).map(id => roomMap[id]).filter(Boolean)}
+                performerName={task.next_performer_id != null ? userMap[task.next_performer_id] : null}
                 onComplete={() => handleCompleteRequest(task)}
                 onEdit={() => setEditTask(task)}
               />
@@ -125,7 +127,7 @@ export default function TasksPage() {
       {/* FAB */}
       <button
         onClick={() => setEditTask({})}
-        className="fixed bottom-8 right-4 w-14 h-14 bg-primary text-white rounded-full shadow-lg shadow-primary/30 flex items-center justify-center active:scale-95 transition-transform z-40"
+        className="fixed bottom-24 right-4 w-14 h-14 bg-primary text-white rounded-full shadow-lg shadow-primary/30 flex items-center justify-center active:scale-95 transition-transform z-40"
       >
         <Plus className="w-7 h-7" />
       </button>
@@ -150,7 +152,7 @@ export default function TasksPage() {
       )}
 
       {undoToast && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-slate-800 text-white px-4 py-3 rounded-2xl shadow-xl text-sm font-medium">
+        <div className="fixed bottom-40 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-slate-800 text-white px-4 py-3 rounded-2xl shadow-xl text-sm font-medium">
           <span className="truncate max-w-[160px]">✓ {undoToast.taskName}</span>
           <button onClick={handleUndo} className="text-primary font-bold whitespace-nowrap">Annulla</button>
         </div>
@@ -169,7 +171,8 @@ export default function TasksPage() {
 
 function TaskForm({ task, rooms, users, onSave, onDelete, onClose }) {
   const [name, setName] = useState(task?.name || '');
-  const [roomId, setRoomId] = useState(task?.room_id || (rooms[0]?.id ?? ''));
+  const initialRoomIds = task?.room_ids || (task?.room_id != null ? [task.room_id] : []);
+  const [roomIds, setRoomIds] = useState(initialRoomIds.length > 0 ? initialRoomIds : (rooms[0] ? [rooms[0].id] : []));
   const [freqDays, setFreqDays] = useState(task?.frequency_days !== undefined ? task.frequency_days : 7);
   const [customFreq, setCustomFreq] = useState(false);
   const [difficulty, setDifficulty] = useState(task?.difficulty || 3);
@@ -195,12 +198,16 @@ function TaskForm({ task, rooms, users, onSave, onDelete, onClose }) {
     setCustomFreq(false);
   };
 
+  const toggleRoom = (id) => {
+    setRoomIds(prev => prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id]);
+  };
+
   const handleSubmit = async () => {
-    if (!name.trim() || !roomId) return;
+    if (!name.trim() || roomIds.length === 0) return;
     setSaving(true);
     await onSave({
       name: name.trim(),
-      room_id: Number(roomId),
+      room_ids: roomIds,
       frequency_days: Number(freqDays),
       difficulty: Number(difficulty),
       assignment_type: assignment,
@@ -233,19 +240,27 @@ function TaskForm({ task, rooms, users, onSave, onDelete, onClose }) {
             />
           </div>
 
-          {/* Stanza */}
+          {/* Stanze (una o più) */}
           <div>
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 block">Stanza</label>
-            <div className="relative">
-              <select
-                value={roomId}
-                onChange={e => setRoomId(e.target.value)}
-                className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 appearance-none bg-white pr-10"
-              >
-                {rooms.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-              </select>
-              <ChevronDown className="absolute right-3 top-3.5 w-4 h-4 text-slate-400 pointer-events-none" />
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 block">Stanze</label>
+            <div className="flex gap-2 flex-wrap">
+              {rooms.map(r => (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => toggleRoom(r.id)}
+                  className={clsx(
+                    'px-3 py-1.5 rounded-xl text-xs font-bold transition-colors',
+                    roomIds.includes(r.id) ? 'bg-primary text-white' : 'bg-slate-100 text-slate-600'
+                  )}
+                >
+                  {r.name}
+                </button>
+              ))}
             </div>
+            {roomIds.length === 0 && (
+              <p className="text-xs text-red-500 mt-1.5">Scegli almeno una stanza</p>
+            )}
           </div>
 
           {/* Frequenza */}
@@ -343,7 +358,7 @@ function TaskForm({ task, rooms, users, onSave, onDelete, onClose }) {
         <div className="mt-6 space-y-2">
           <button
             onClick={handleSubmit}
-            disabled={saving || !name.trim()}
+            disabled={saving || !name.trim() || roomIds.length === 0}
             className="w-full py-3.5 bg-primary text-white font-bold rounded-2xl active:scale-[0.98] transition-transform disabled:opacity-50"
           >
             {saving ? 'Salvataggio...' : task ? 'Salva modifiche' : 'Crea task'}

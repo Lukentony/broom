@@ -1,6 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Home, CheckSquare, LayoutGrid, Calendar, History, Settings, X, Trophy } from 'lucide-react';
 import { useDrawer } from '../contexts/DrawerContext';
+import pkg from '../../package.json';
 
 const NAV_ITEMS = [
   { path: '/',          icon: Home,        label: 'Home' },
@@ -66,7 +67,7 @@ export default function SideDrawer() {
 
         <div className="p-4 border-t border-slate-50">
           <p className="text-[10px] text-slate-300 font-bold uppercase tracking-tighter text-center">
-            Broom v2.0.0
+            Broom v{pkg.version}
           </p>
         </div>
       </div>
