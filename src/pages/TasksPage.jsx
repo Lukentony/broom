@@ -324,6 +324,7 @@ function TaskForm({ task, rooms, users, onSave, onDelete, onSnooze, onClose }) {
                   min={1}
                   max={365}
                   value={freqDays}
+                  onFocus={e => e.target.select()}
                   onChange={e => setFreqDays(e.target.value)}
                   className="w-20 border border-hairline rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 text-center"
                 />

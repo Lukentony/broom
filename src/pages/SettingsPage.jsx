@@ -361,9 +361,10 @@ export default function SettingsPage() {
           </label>
           <div className="flex items-center justify-between">
             <span className="text-sm font-semibold text-ink2">Giorni anticipo</span>
-            <input 
-              type="number" 
-              value={prefs.early_completion_days} 
+            <input
+              type="number"
+              value={prefs.early_completion_days}
+              onFocus={(e) => e.target.select()}
               onChange={(e) => setPrefs(p => ({ ...p, early_completion_days: e.target.value }))}
               className="w-14 px-2 py-2 text-center bg-background-sunken border border-hairline rounded-xl outline-none font-bold text-sm"
             />
@@ -388,11 +389,12 @@ export default function SettingsPage() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <span className="text-sm font-semibold text-ink2">Moltiplicatore punti base</span>
-            <input 
-              type="number" 
+            <input
+              type="number"
               min={1}
               max={100}
-              value={scoringBase} 
+              value={scoringBase}
+              onFocus={(e) => e.target.select()}
               onChange={(e) => setScoringBase(parseInt(e.target.value, 10) || 1)}
               className="w-16 px-2 py-2 text-center bg-background-sunken border border-hairline rounded-xl outline-none font-bold text-sm"
             />
@@ -414,6 +416,7 @@ export default function SettingsPage() {
               <input
                 type="number" min={0} max={30}
                 value={graceDays}
+                onFocus={(e) => e.target.select()}
                 onChange={(e) => setGraceDays(parseInt(e.target.value, 10) || 0)}
                 className="w-16 px-2 py-2 text-center bg-background-sunken border border-hairline rounded-xl outline-none font-bold text-sm"
               />
@@ -423,6 +426,7 @@ export default function SettingsPage() {
               <input
                 type="number" min={0} max={100}
                 value={lateBonus}
+                onFocus={(e) => e.target.select()}
                 onChange={(e) => setLateBonus(parseInt(e.target.value, 10) || 0)}
                 className="w-16 px-2 py-2 text-center bg-background-sunken border border-hairline rounded-xl outline-none font-bold text-sm"
               />
@@ -454,9 +458,11 @@ export default function SettingsPage() {
                   <span className="text-xs text-ink2">1ª soglia: dopo giorni / punti persi</span>
                   <div className="flex gap-1.5 flex-shrink-0">
                     <input type="number" min={1} max={30} value={autoPenaltyDays1}
+                      onFocus={(e) => e.target.select()}
                       onChange={(e) => setAutoPenaltyDays1(parseInt(e.target.value, 10) || 1)}
                       className="w-12 px-1 py-2 text-center bg-background-sunken border border-hairline rounded-xl outline-none font-bold text-sm" />
                     <input type="number" min={0} max={100} value={autoPenaltyPoints1}
+                      onFocus={(e) => e.target.select()}
                       onChange={(e) => setAutoPenaltyPoints1(parseInt(e.target.value, 10) || 0)}
                       className="w-12 px-1 py-2 text-center bg-background-sunken border border-hairline rounded-xl outline-none font-bold text-sm" />
                   </div>
@@ -464,6 +470,7 @@ export default function SettingsPage() {
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs text-ink2">2ª soglia: dopo giorni (punti = difficoltà × {scoringBase})</span>
                   <input type="number" min={1} max={30} value={autoPenaltyDays2}
+                    onFocus={(e) => e.target.select()}
                     onChange={(e) => setAutoPenaltyDays2(parseInt(e.target.value, 10) || 1)}
                     className="w-12 px-1 py-2 text-center bg-background-sunken border border-hairline rounded-xl outline-none font-bold text-sm flex-shrink-0" />
                 </div>

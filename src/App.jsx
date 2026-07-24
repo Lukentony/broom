@@ -13,9 +13,12 @@ import WhoAreYouModal from './components/WhoAreYouModal';
 import SideDrawer from './components/SideDrawer';
 import BottomNav from './components/BottomNav';
 import UpdateBanner from './components/UpdateBanner';
+import NewReleaseBanner from './components/NewReleaseBanner';
 import OfflineBanner from './components/OfflineBanner';
 import useOnlineStatus from './hooks/useOnlineStatus';
 import { store } from './store';
+import { checkForUpdate } from './services/updateCheck';
+import pkg from '../package.json';
 
 const SCHEMA_VERSION = 'broom_schema_v2.1';
 
@@ -44,12 +47,18 @@ function AppLayout() {
 
 export default function App() {
   const [showUpdate, setShowUpdate] = useState(false);
+  const [newRelease, setNewRelease] = useState(null);
   const [userId, setUserId] = useState(localStorage.getItem('broom_user_id'));
   const isOnline = useOnlineStatus();
 
   useEffect(() => {
     // Inizializza storage nativo (Capacitor Filesystem) dopo il mount
     store.initNativeStorage();
+
+    // Controlla se c'è una release più recente su GitHub (al massimo 1
+    // volta al giorno). Non scarica/installa nulla da sola, mostra solo
+    // un avviso con il link alla pagina della release.
+    checkForUpdate(pkg.version).then(setNewRelease).catch(() => {});
 
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/service-worker.js').then((reg) => {
@@ -78,7 +87,14 @@ export default function App() {
         <div className="min-h-screen bg-background text-ink">
           {!isOnline && <OfflineBanner />}
           {showUpdate && <UpdateBanner onUpdate={() => window.location.reload()} />}
-          
+          {!showUpdate && newRelease && (
+            <NewReleaseBanner
+              version={newRelease.version}
+              url={newRelease.url}
+              onDismiss={() => setNewRelease(null)}
+            />
+          )}
+
           {!userId ? (
             <WhoAreYouModal onSelect={setUserId} />
           ) : (
