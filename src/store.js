@@ -428,58 +428,6 @@ export const store = {
     return Promise.resolve({ success: true });
   },
 
-  resetTest() {
-    // Locale: resetta tutte le scadenze a oggi
-    mutate(d => {
-      const today = todayISO();
-      d.tasks.forEach(t => {
-        if (t.is_active !== false) {
-          t.next_due_date = today;
-          t.penalized_delays = [];
-        }
-      });
-    });
-    return Promise.resolve({ success: true });
-  },
-
-  generateTestData() {
-    // Locale: genera completamenti finti per gli ultimi 14 giorni
-    const userId = parseInt(localStorage.getItem('broom_user_id')) || 0;
-    const activeTasks = doc.tasks.filter(t => t.is_active !== false);
-    if (activeTasks.length === 0) return Promise.resolve({ completions_created: 0 });
-
-    let count = 0;
-    mutate(d => {
-      for (let day = 1; day <= 14; day++) {
-        const date = new Date();
-        date.setDate(date.getDate() - day);
-        const dateStr = date.toISOString().split('T')[0];
-
-        // Completa alcuni task casuali
-        const eligible = d.tasks.filter(t => t.is_active !== false && t.next_due_date <= dateStr);
-        for (const task of eligible.slice(0, Math.ceil(eligible.length / 3))) {
-          const { points } = calculatePoints(task.difficulty, task.assignment_type, 0);
-          d.completions.push({
-            id: completionId(),
-            task_id: task.id,
-            user_id: userId,
-            completed_at: new Date(`${dateStr}T10:00:00`).toISOString(),
-            points_awarded: points,
-            was_on_demand: false,
-            was_automated: true,
-            is_shared: task.assignment_type === 'TOGETHER',
-            task_name: task.name,
-            user_name: null,
-          });
-          count++;
-          // Ricalcola scadenza
-          task.next_due_date = nextDueFromRecurrence(task, dateStr);
-        }
-      }
-    });
-    return Promise.resolve({ completions_created: count });
-  },
-
   // --- Rooms ---
 
   getRooms() {

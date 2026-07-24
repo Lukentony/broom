@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSettings } from '../hooks/useSettings';
-import { Plane, FlaskConical, Settings, Layout, Users, Save, LogOut, ChevronRight, UserCircle, Award, Bell, UserPlus, CalendarOff, Download, Upload } from 'lucide-react';
+import { Plane, Settings, Layout, Users, LogOut, UserCircle, Award, Bell, UserPlus, CalendarOff, Download, Upload } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import { store } from '../store';
 import { requestPermissions, checkPermissions } from '../services/notifications';
@@ -11,10 +11,7 @@ import pkg from '../../package.json';
 export default function SettingsPage() {
   const { settings, loading, toggleVacation, updateScoring, refetch } = useSettings();
   const [vacationLoading, setVacationLoading] = useState(false);
-  const [resetting, setResetting] = useState(false);
-  const [generating, setGenerating] = useState(false);
-  const [generateResult, setGenerateResult] = useState(null);
-  
+
   const [users, setUsers] = useState([]);
   const [prefs, setPrefs] = useState({ show_urgency_colors: 'true', early_completion_days: '2', grace_period_days: '1' });
   const [widgets, setWidgets] = useState({ order: ['leaderboard', 'urgent'], hidden: [] });
@@ -23,8 +20,7 @@ export default function SettingsPage() {
   const [savingPrefs, setSavingPrefs] = useState(false);
   const [savingWidgets, setSavingWidgets] = useState(false);
   const [savingScoring, setSavingScoring] = useState(false);
-  
-  const [testMode, setTestMode] = useState(localStorage.getItem('broom_test_mode') === 'true');
+
   const currentUserId = localStorage.getItem('broom_user_id');
   const currentUser = users.find(u => u.user_id.toString() === currentUserId);
 
@@ -81,32 +77,6 @@ export default function SettingsPage() {
       localStorage.removeItem('broom_user_id');
       window.location.reload();
     }
-  };
-
-  const handleToggleTestMode = (e) => {
-    const val = e.target.checked;
-    setTestMode(val);
-    localStorage.setItem('broom_test_mode', val ? 'true' : 'false');
-  };
-
-  const handleGenerateTestData = async () => {
-    if (!window.confirm('Generare dati di test per gli ultimi 14 giorni?')) return;
-    setGenerating(true);
-    setGenerateResult(null);
-    try {
-      const res = await store.generateTestData();
-      setGenerateResult(`Creati ${res.completions_created} completamenti di test ✨`);
-    } catch (e) {
-      setGenerateResult('Errore nella generazione ❌');
-    }
-    setGenerating(false);
-  };
-
-  const handleReset = async () => {
-    if (!window.confirm('Reset completo: tutte le scadenze tornano a oggi, punti azzerati. Continuare?')) return;
-    setResetting(true);
-    await store.resetTest().catch(() => {});
-    setResetting(false);
   };
 
   const handleVacationToggle = async () => {
@@ -415,13 +385,26 @@ export default function SettingsPage() {
               className="w-5 h-5 accent-primary rounded-lg"
             />
           </label>
-          <button 
+          <button
             onClick={handleSaveScoring}
             disabled={savingScoring}
             className="w-full flex items-center justify-center gap-2 py-3 bg-ink text-white rounded-2xl font-black text-xs uppercase tracking-widest active:scale-[0.98] transition-all disabled:opacity-50"
           >
             {savingScoring ? 'Salvataggio...' : 'Salva regole'}
           </button>
+
+          <div className="bg-background-sunken p-4 rounded-2xl space-y-2">
+            <p className="text-[10px] font-bold text-ink3 uppercase tracking-widest">Come si calcolano</p>
+            <ul className="text-xs text-ink2 space-y-1.5 leading-relaxed">
+              <li>• In tempo: difficoltà × {scoringBase} (es. difficoltà 3 = {3 * scoringBase} punti)</li>
+              <li>• Con 1 giorno di ritardo: solo +1 punto</li>
+              <li>• Con più di 1 giorno di ritardo: punti negativi, -(difficoltà × {scoringBase})</li>
+              {scoringSplitShared && (
+                <li>• Task "Insieme": i punti sopra si dividono a metà tra i due</li>
+              )}
+              <li>• Task scaduto mai completato: penalità automatica -1 dopo 1 giorno, -(difficoltà × {scoringBase}) dopo 3 giorni (salta weekend/giorni di riposo/vacanza; solo per task con un responsabile — non "Chiunque")</li>
+            </ul>
+          </div>
         </div>
       </section>
 
@@ -514,57 +497,6 @@ export default function SettingsPage() {
         {importResult && (
           <div className="bg-primary-soft p-3 rounded-xl text-center">
             <p className="text-xs font-bold text-primary-ink">{importResult}</p>
-          </div>
-        )}
-      </section>
-
-      {/* Test Mode Section */}
-      <section className="bg-background-sunken p-6 rounded-[2.5rem] border border-hairline space-y-5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-3 rounded-2xl bg-soon-soft text-soon-ink">
-              <FlaskConical className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="font-bold text-ink tracking-tight">Modalità Test</p>
-              <p className="text-[10px] text-ink3 font-bold uppercase">Sviluppo & Debug</p>
-            </div>
-          </div>
-          <input 
-            type="checkbox" 
-            checked={testMode} 
-            onChange={handleToggleTestMode}
-            className="w-6 h-6 accent-soon"
-          />
-        </div>
-
-        {testMode && (
-          <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
-            <button
-              onClick={handleGenerateTestData}
-              disabled={generating}
-              className="w-full flex items-center justify-between p-4 bg-white border border-soon-soft rounded-2xl shadow-sm active:scale-[0.98] transition-all group"
-            >
-              <div className="text-left">
-                <p className="font-bold text-ink text-sm">Genera dati finti</p>
-                <p className="text-[10px] text-ink3 font-medium italic">Simula 14 giorni di attività</p>
-              </div>
-              <ChevronRight className="text-soon group-hover:text-soon transition-colors" />
-            </button>
-
-            <button
-              onClick={handleReset}
-              disabled={resetting}
-              className="w-full p-4 bg-urgent-soft text-urgent-ink rounded-2xl font-bold text-xs uppercase tracking-widest border border-urgent-soft active:bg-urgent-soft transition-colors"
-            >
-              {resetting ? 'Reset in corso...' : 'Reset Totale'}
-            </button>
-
-            {generateResult && (
-              <div className="bg-soon-soft p-3 rounded-xl text-center">
-                <p className="text-xs font-bold text-soon-ink">{generateResult}</p>
-              </div>
-            )}
           </div>
         )}
       </section>
