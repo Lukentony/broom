@@ -33,18 +33,40 @@ export function nextDateForWeekdays(baseDate, days) {
 }
 
 /**
+ * Sposta una data in avanti finché non cade su un giorno che non è tra i
+ * "giorni di riposo" (0=Domenica..6=Sabato). Se noWorkDays è vuoto non
+ * tocca nulla. Se per assurdo tutti i 7 giorni sono di riposo, ritorna la
+ * data originale invece di girare a vuoto.
+ * @param {string} dateStr - Data ISO
+ * @param {number[]} noWorkDays
+ * @returns {string} Data ISO
+ */
+export function shiftPastNoWorkDays(dateStr, noWorkDays) {
+  if (!noWorkDays || noWorkDays.length === 0) return dateStr;
+  const date = new Date(dateStr);
+  for (let i = 0; i < 7; i++) {
+    if (!noWorkDays.includes(date.getDay())) break;
+    date.setDate(date.getDate() + 1);
+  }
+  return date.toISOString().split('T')[0];
+}
+
+/**
  * Calcola la prossima scadenza di un task dalla data di completamento.
  * Un task con `recurrence_days` (giorni della settimana specifici) ignora
- * `frequency_days` e usa quello; altrimenti ricorrenza a intervallo fisso.
+ * `frequency_days` e usa quello, ed è una scelta esplicita dell'utente:
+ * non viene spostato dai giorni di riposo. La ricorrenza a intervallo
+ * fisso invece rispetta noWorkDays (scivola al primo giorno lavorativo).
  * @param {object} task - Il task
  * @param {string} fromDate - Data ISO da cui calcolare (oggi o data teorica)
+ * @param {number[]} [noWorkDays] - Giorni della settimana da evitare (0-6)
  * @returns {string} Data ISO (YYYY-MM-DD)
  */
-export function nextDueFromRecurrence(task, fromDate) {
+export function nextDueFromRecurrence(task, fromDate, noWorkDays = []) {
   if (Array.isArray(task.recurrence_days) && task.recurrence_days.length > 0) {
     return nextDateForWeekdays(fromDate, task.recurrence_days);
   }
-  return calculateNextDate(fromDate, task.frequency_days);
+  return shiftPastNoWorkDays(calculateNextDate(fromDate, task.frequency_days), noWorkDays);
 }
 
 /**

@@ -161,9 +161,16 @@ export async function cancelAll() {
  * Chiamata ogni volta che i task cambiano.
  *
  * @param {object} storeRef - Riferimento allo store per leggere task e completamenti
+ * @param {number[]} [noWorkDays] - Giorni della settimana (0-6) senza notifiche
  */
-export async function updateNotifications(storeRef) {
+export async function updateNotifications(storeRef, noWorkDays = []) {
   if (!(await ensureInit())) return;
+
+  if (noWorkDays.includes(new Date().getDay())) {
+    await cancelMorning();
+    await cancelEvening();
+    return;
+  }
 
   const today = todayISO();
 

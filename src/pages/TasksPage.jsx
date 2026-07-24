@@ -5,6 +5,7 @@ import CompletionSheet from '../components/CompletionSheet';
 import PageHeader from '../components/PageHeader';
 import { Plus, X, Star } from 'lucide-react';
 import { clsx } from 'clsx';
+import { WEEKDAYS_UI } from '../helpers/dates.js';
 
 const FREQ_PRESETS = [
   { label: 'Mai', days: 0 },
@@ -13,16 +14,6 @@ const FREQ_PRESETS = [
   { label: 'Settimanale', days: 7 },
   { label: '2 settimane', days: 14 },
   { label: 'Mensile', days: 30 },
-];
-
-const WEEKDAYS_UI = [
-  { value: 1, label: 'Lun' },
-  { value: 2, label: 'Mar' },
-  { value: 3, label: 'Mer' },
-  { value: 4, label: 'Gio' },
-  { value: 5, label: 'Ven' },
-  { value: 6, label: 'Sab' },
-  { value: 0, label: 'Dom' },
 ];
 
 export default function TasksPage() {

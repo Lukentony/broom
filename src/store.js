@@ -128,6 +128,20 @@ function isVacationMode() {
   }
 }
 
+// Giorni della settimana in cui non si vogliono task/notifiche (0=Domenica
+// ..6=Sabato). Default: weekend libero (comportamento di prima, quando era
+// cablato) finché l'utente non lo cambia esplicitamente in Impostazioni.
+function getNoWorkDays() {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    const settings = raw ? JSON.parse(raw) : {};
+    if (settings.no_work_days === undefined) return [0, 6];
+    return settings.no_work_days.split(',').filter(s => s !== '').map(Number);
+  } catch {
+    return [0, 6];
+  }
+}
+
 // Penalità automatica sui task lasciati scaduti senza completarli (mai
 // tirati indietro se completati): soglie fisse a 1 e 3 giorni di ritardo,
 // una volta sola per soglia per ciclo di scadenza (task.penalized_delays,
@@ -140,7 +154,7 @@ function isVacationMode() {
 function checkOverduePenalties(d) {
   if (isVacationMode()) return;
   const today = new Date();
-  if (today.getDay() === 0 || today.getDay() === 6) return; // weekend
+  if (getNoWorkDays().includes(today.getDay())) return;
 
   const todayStr = todayISO();
   const { userAId, userBId } = getUserAB(d);
@@ -198,7 +212,7 @@ function mutate(fn) {
 
 function notifyChange() {
   // Fire-and-forget: aggiorna le notifiche senza bloccare la mutazione
-  updateNotifications(store).catch(err => {
+  updateNotifications(store, getNoWorkDays()).catch(err => {
     console.warn('Notification update failed:', err);
   });
 }
@@ -242,10 +256,13 @@ export const store = {
         // Se non specificata esplicitamente, la prima scadenza rispetta la
         // ricorrenza scelta invece di essere sempre "oggi" (frequency_days=0
         // → calculateNextDate non sposta la data, "una tantum" resta dovuto
-        // subito; recurrence_days → prossimo giorno della settimana scelto).
-        next_due_date: data.next_due_date || (recurrenceDays
-          ? nextDueFromRecurrence({ recurrence_days: recurrenceDays }, todayISO())
-          : calculateNextDate(todayISO(), data.frequency_days)),
+        // subito; recurrence_days → prossimo giorno della settimana scelto;
+        // altrimenti scivola oltre i giorni di riposo se serve).
+        next_due_date: data.next_due_date || nextDueFromRecurrence(
+          { frequency_days: data.frequency_days, recurrence_days: recurrenceDays },
+          todayISO(),
+          getNoWorkDays()
+        ),
         is_active: true,
         is_quick_action: false,
         tags: data.tags || null,
@@ -285,9 +302,7 @@ export const store = {
       } else if (freqChanged || recurrenceChanged) {
         // Cambiare la ricorrenza deve avere effetto subito, non solo dopo il
         // prossimo completamento — altrimenti sembra che non faccia nulla.
-        task.next_due_date = task.recurrence_days
-          ? nextDueFromRecurrence(task, todayISO())
-          : calculateNextDate(todayISO(), task.frequency_days);
+        task.next_due_date = nextDueFromRecurrence(task, todayISO(), getNoWorkDays());
         task.penalized_delays = [];
       }
 
@@ -350,7 +365,7 @@ export const store = {
       d.completions.push(completion);
 
       // Ricalcola prossima scadenza
-      t.next_due_date = nextDueFromRecurrence(t, baseDate);
+      t.next_due_date = nextDueFromRecurrence(t, baseDate, getNoWorkDays());
       t.penalized_delays = [];
 
       // Aggiorna ultimo esecutore e calcola a chi tocca il prossimo giro
@@ -614,7 +629,7 @@ export const store = {
     return store.getSettings().then(settings => {
       const obj = settings.reduce((acc, { key, value }) => ({ ...acc, [key]: value }), {});
       return Promise.resolve({
-        widgets_order: obj.widgets_order || 'leaderboard,urgent,rooms',
+        widgets_order: obj.widgets_order || 'leaderboard,urgent',
         widgets_hidden: obj.widgets_hidden || '',
       });
     });
@@ -670,6 +685,87 @@ export const store = {
       user = doc.users[doc.users.length - 1];
     }
     return Promise.resolve({ user_name: user.name, user_id: user.id });
+  },
+
+  // --- Import/Export (per non dover reinserire i task a mano nei test) ---
+
+  /** Esporta stanze e task attivi come oggetto serializzabile (JSON) */
+  exportTasks() {
+    const rooms = doc.rooms.filter(r => r.is_active !== false);
+    const roomNameById = Object.fromEntries(rooms.map(r => [r.id, r.name]));
+    const tasks = doc.tasks.filter(t => t.is_active !== false);
+    return Promise.resolve({
+      version: 1,
+      exported_at: nowISO(),
+      rooms: rooms.map(r => ({ name: r.name, icon: r.icon, sort_order: r.sort_order })),
+      tasks: tasks.map(t => ({
+        name: t.name,
+        room_names: getRoomIds(t).map(id => roomNameById[id]).filter(Boolean),
+        frequency_days: t.frequency_days,
+        recurrence_days: t.recurrence_days || null,
+        difficulty: t.difficulty,
+        assignment_type: t.assignment_type,
+        grace_period_days: t.grace_period_days,
+        tags: t.tags,
+        next_due_date: t.next_due_date,
+      })),
+    });
+  },
+
+  /**
+   * Importa stanze e task da un oggetto nello stesso formato di
+   * exportTasks(). Non distruttivo: le stanze sono abbinate per nome (case
+   * insensitive) a quelle già esistenti, mai duplicate; i task vengono
+   * sempre aggiunti come nuovi (turni/penalità ripartono da zero, gli id
+   * utente originali non hanno senso su un documento diverso).
+   */
+  importTasks(data) {
+    if (!data || !Array.isArray(data.tasks)) {
+      return Promise.reject({ message: 'File non valido' });
+    }
+    let imported = 0;
+    mutate(d => {
+      const nameToId = {};
+      d.rooms.filter(r => r.is_active !== false).forEach(r => {
+        nameToId[r.name.toLowerCase()] = r.id;
+      });
+
+      (data.rooms || []).forEach(rd => {
+        const key = (rd.name || '').toLowerCase();
+        if (!key || nameToId[key]) return;
+        const id = nextId();
+        d.rooms.push({ id, name: rd.name, icon: rd.icon || 'Home', sort_order: rd.sort_order || 0, is_active: true });
+        nameToId[key] = id;
+      });
+
+      data.tasks.forEach(td => {
+        const roomIds = (td.room_names || [])
+          .map(n => nameToId[(n || '').toLowerCase()])
+          .filter(id => id !== undefined);
+        if (!td.name || roomIds.length === 0) return;
+        const id = nextId();
+        d.tasks.push({
+          id,
+          room_ids: roomIds,
+          name: td.name,
+          frequency_days: td.frequency_days ?? 7,
+          recurrence_days: Array.isArray(td.recurrence_days) && td.recurrence_days.length > 0 ? td.recurrence_days : null,
+          difficulty: td.difficulty || 3,
+          assignment_type: td.assignment_type || 'ANY',
+          grace_period_days: td.grace_period_days || 0,
+          next_due_date: td.next_due_date || todayISO(),
+          is_active: true,
+          is_quick_action: false,
+          tags: td.tags || null,
+          last_performer_id: null,
+          next_performer_id: null,
+          penalized_delays: [],
+          created_at: nowISO(),
+        });
+        imported++;
+      });
+    });
+    return Promise.resolve({ success: true, imported });
   },
 
   // --- Utility per integrazione ---

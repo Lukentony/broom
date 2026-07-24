@@ -1,11 +1,23 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { store } from '../store';
+
+// "Oggi" fissato a un mercoledì noto: il default dei giorni di riposo
+// ([0,6] = weekend) rende i calcoli di scadenza dipendenti dal giorno
+// reale in cui girano i test — senza un'ancora fissa, i test sarebbero
+// intermittenti se lanciati di sabato/domenica.
+const FIXED_TODAY = new Date('2026-07-15T12:00:00');
 
 describe('Store Module (locale)', () => {
   beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(FIXED_TODAY);
     const keys = Object.keys(localStorage);
     keys.forEach(k => localStorage.removeItem(k));
     return store._reload();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   // Setup: create a user and a task so tests are deterministic
@@ -210,22 +222,12 @@ describe('Store Module (locale)', () => {
     expect(history.length).toBe(0); // nessun completamento registrato
   });
 
-  // La penalità automatica salta i weekend: i test fissano l'orologio su
-  // un giorno feriale noto per non essere flaky se lanciati di sabato/domenica.
-  function nextWeekday(from) {
-    const d = new Date(from);
-    while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
-    d.setHours(12, 0, 0, 0);
-    return d;
-  }
-
   it('should apply an automatic penalty for a task overdue by exactly 1 day', async () => {
     await seed();
     const tasks = await store.getTasks();
     const task = tasks.find(t => t.name === 'Seed task');
 
-    const today = nextWeekday(new Date());
-    const yesterday = new Date(today);
+    const yesterday = new Date(FIXED_TODAY);
     yesterday.setDate(yesterday.getDate() - 1);
     // assignment_type esplicito: 'ANY' (default di seed()) non ha un
     // responsabile unico, la penalità automatica lo salta di proposito
@@ -235,13 +237,7 @@ describe('Store Module (locale)', () => {
       assignment_type: 'TOGETHER',
     });
 
-    vi.useFakeTimers();
-    vi.setSystemTime(today);
-    try {
-      await store._checkOverduePenalties();
-    } finally {
-      vi.useRealTimers();
-    }
+    await store._checkOverduePenalties();
 
     const history = await store.getHistory(30);
     const penalty = history.find(h => h.task_name.includes('penalità'));
@@ -254,25 +250,15 @@ describe('Store Module (locale)', () => {
     const tasks = await store.getTasks();
     const task = tasks.find(t => t.name === 'Seed task');
 
-    const today = nextWeekday(new Date());
-    const yesterday = new Date(today);
+    const yesterday = new Date(FIXED_TODAY);
     yesterday.setDate(yesterday.getDate() - 1);
-    // assignment_type esplicito: 'ANY' (default di seed()) non ha un
-    // responsabile unico, la penalità automatica lo salta di proposito
-    // (stesso comportamento dell'originale HomeSync).
     await store.updateTask(task.id, {
       next_due_date: yesterday.toISOString().split('T')[0],
       assignment_type: 'TOGETHER',
     });
 
-    vi.useFakeTimers();
-    vi.setSystemTime(today);
-    try {
-      await store._checkOverduePenalties();
-      await store._checkOverduePenalties(); // seconda chiamata, stesso giorno
-    } finally {
-      vi.useRealTimers();
-    }
+    await store._checkOverduePenalties();
+    await store._checkOverduePenalties(); // seconda chiamata, stesso giorno
 
     const history = await store.getHistory(30);
     const penalties = history.filter(h => h.task_name.includes('penalità'));
@@ -312,7 +298,7 @@ describe('Store Module (locale)', () => {
   it('should handle widgets', async () => {
     const widgets = await store.getWidgets();
     expect(widgets).toHaveProperty('widgets_order');
-    expect(widgets.widgets_order).toBe('leaderboard,urgent,rooms');
+    expect(widgets.widgets_order).toBe('leaderboard,urgent');
   });
 
   it('should handle scoring', async () => {
@@ -345,5 +331,63 @@ describe('Store Module (locale)', () => {
     const afterUndoTasks = await store.getTasks();
     const afterUndo = afterUndoTasks.find(t => t.id === taskBefore.id);
     expect(afterUndo.next_due_date).toBe(originalDue);
+  });
+
+  it('should export rooms and tasks, then reimport them without duplicating rooms', async () => {
+    await seed();
+    const exported = await store.exportTasks();
+    expect(exported.tasks.length).toBeGreaterThan(0);
+    expect(exported.rooms.length).toBeGreaterThan(0);
+
+    const roomsBefore = await store.getRooms();
+    const res = await store.importTasks(exported);
+    expect(res.imported).toBe(exported.tasks.length);
+
+    const roomsAfter = await store.getRooms();
+    expect(roomsAfter.length).toBe(roomsBefore.length); // nessuna stanza duplicata
+
+    const tasksAfter = await store.getTasks();
+    const imported = tasksAfter.filter(t => t.name === 'Seed task');
+    expect(imported.length).toBe(2); // originale + importato
+    imported.forEach(t => {
+      expect(t.next_performer_id).toBeNull(); // reset, non ha senso dopo import
+    });
+  });
+
+  it('should reject an import with no tasks array', async () => {
+    await expect(store.importTasks({ rooms: [] })).rejects.toBeDefined();
+  });
+
+  it('should shift the due date past a custom no-work day', async () => {
+    const rooms = await store.getRooms();
+    const roomId = rooms[0]?.id || 1;
+    const todayDow = FIXED_TODAY.getDay(); // mercoledì = 3
+
+    await store.patchPreferences({ no_work_days: String(todayDow) });
+    await store.createTask({
+      name: 'No-work task',
+      room_ids: [roomId],
+      frequency_days: 7, // stesso giorno della settimana di oggi
+      difficulty: 2,
+    });
+
+    const tasks = await store.getTasks();
+    const created = tasks.find(t => t.name === 'No-work task');
+    expect(new Date(created.next_due_date).getDay()).not.toBe(todayDow);
+  });
+
+  it('should not shift the due date when no-work-days is empty (default weekend, wednesday allowed)', async () => {
+    const rooms = await store.getRooms();
+    const roomId = rooms[0]?.id || 1;
+    await store.createTask({
+      name: 'Wednesday task',
+      room_ids: [roomId],
+      frequency_days: 7,
+      difficulty: 2,
+    });
+    const tasks = await store.getTasks();
+    const created = tasks.find(t => t.name === 'Wednesday task');
+    // FIXED_TODAY è mercoledì: +7gg resta mercoledì, mai nel weekend di default
+    expect(new Date(created.next_due_date).getDay()).toBe(FIXED_TODAY.getDay());
   });
 });

@@ -5,7 +5,6 @@ import { usePolling } from '../hooks/usePolling';
 import { store } from '../store';
 import { Trophy, ChevronRight } from 'lucide-react';
 import TaskCard from '../components/TaskCard';
-import RoomCard from '../components/RoomCard';
 import CompletionSheet from '../components/CompletionSheet';
 import VacationBanner from '../components/VacationBanner';
 import PageHeader from '../components/PageHeader';
@@ -15,7 +14,7 @@ export default function Dashboard() {
   const [rooms, setRooms] = useState([]);
   const [stats, setStats] = useState(null);
   const [selectedTask, setSelectedTask] = useState(null);
-  const [widgetsOrder, setWidgetsOrder] = useState(['leaderboard', 'urgent', 'rooms']);
+  const [widgetsOrder, setWidgetsOrder] = useState(['leaderboard', 'urgent']);
   const [widgetsHidden, setWidgetsHidden] = useState([]);
   const navigate = useNavigate();
 
@@ -28,7 +27,7 @@ export default function Dashboard() {
       if (data.widgets_order) setWidgetsOrder(data.widgets_order.split(','));
       if (data.widgets_hidden) setWidgetsHidden(data.widgets_hidden.split(','));
     }).catch(() => {
-      setWidgetsOrder(['leaderboard', 'urgent', 'rooms']);
+      setWidgetsOrder(['leaderboard', 'urgent']);
       setWidgetsHidden([]);
     });
   }, []);
@@ -103,16 +102,6 @@ export default function Dashboard() {
                 onEdit={() => navigate('/tasks')}
               />
             ))}
-          </div>
-        );
-        
-      case 'rooms':
-        return (
-          <div key="rooms" className="space-y-3">
-            <h3 className="font-bold text-slate-800 text-lg px-1 pt-2">Stanze</h3>
-            {loading ? <div className="text-center py-10 text-slate-400">Caricamento...</div> :
-             rooms.length === 0 ? <EmptyState text="Nessuna stanza configurata." /> :
-             rooms.map(room => <RoomCard key={room.id} room={room} />)}
           </div>
         );
         

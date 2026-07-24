@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useSettings } from '../hooks/useSettings';
-import { Plane, FlaskConical, Settings, Layout, Users, Save, LogOut, ChevronRight, UserCircle, Award, Bell, UserPlus } from 'lucide-react';
+import { Plane, FlaskConical, Settings, Layout, Users, Save, LogOut, ChevronRight, UserCircle, Award, Bell, UserPlus, CalendarOff, Download, Upload } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import { store } from '../store';
 import { requestPermissions, checkPermissions } from '../services/notifications';
+import { WEEKDAYS_UI } from '../helpers/dates.js';
 import { clsx } from 'clsx';
 import pkg from '../../package.json';
 
@@ -16,7 +17,7 @@ export default function SettingsPage() {
   
   const [users, setUsers] = useState([]);
   const [prefs, setPrefs] = useState({ show_urgency_colors: 'true', early_completion_days: '2', grace_period_days: '1' });
-  const [widgets, setWidgets] = useState({ order: ['leaderboard', 'urgent', 'rooms'], hidden: [] });
+  const [widgets, setWidgets] = useState({ order: ['leaderboard', 'urgent'], hidden: [] });
   const [scoringBase, setScoringBase] = useState(10);
   const [scoringSplitShared, setScoringSplitShared] = useState(true);
   const [savingPrefs, setSavingPrefs] = useState(false);
@@ -34,6 +35,12 @@ export default function SettingsPage() {
   const [newUserName, setNewUserName] = useState('');
   const [savingNewUser, setSavingNewUser] = useState(false);
 
+  const [noWorkDays, setNoWorkDays] = useState([0, 6]);
+  const [savingNoWorkDays, setSavingNoWorkDays] = useState(false);
+
+  const [importResult, setImportResult] = useState(null);
+  const [importing, setImporting] = useState(false);
+
   useEffect(() => {
     store.getStats().then(data => setUsers(data.leaderboard || [])).catch(() => {});
     checkPermissions().then(setNotifStatus).catch(() => {});
@@ -47,11 +54,16 @@ export default function SettingsPage() {
         grace_period_days: settings.pref_grace_period_days || '1'
       });
       setWidgets({
-        order: (settings.widgets_order || 'leaderboard,urgent,rooms').split(','),
+        order: (settings.widgets_order || 'leaderboard,urgent').split(','),
         hidden: (settings.widgets_hidden || '').split(',').filter(Boolean)
       });
       setScoringBase(parseInt(settings.scoring_base, 10) || 10);
       setScoringSplitShared(settings.scoring_split_shared !== 'false');
+      setNoWorkDays(
+        settings.no_work_days === undefined
+          ? [0, 6]
+          : settings.no_work_days.split(',').filter(Boolean).map(Number)
+      );
     }
   }, [settings, loading]);
 
@@ -145,6 +157,44 @@ export default function SettingsPage() {
       store.getStats().then(data => setUsers(data.leaderboard || [])).catch(() => {});
     }
     setUserToRename(null);
+  };
+
+  const toggleNoWorkDay = async (d) => {
+    const next = noWorkDays.includes(d) ? noWorkDays.filter(x => x !== d) : [...noWorkDays, d];
+    setNoWorkDays(next);
+    setSavingNoWorkDays(true);
+    await store.patchPreferences({ no_work_days: next.join(',') }).catch(() => {});
+    setSavingNoWorkDays(false);
+  };
+
+  const handleExportTasks = async () => {
+    const data = await store.exportTasks();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `broom_task_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportTasks = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // permette di re-importare lo stesso file
+    if (!file) return;
+    setImporting(true);
+    setImportResult(null);
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      const res = await store.importTasks(data);
+      setImportResult(`Importati ${res.imported} task ✨`);
+    } catch (err) {
+      setImportResult('File non valido ❌');
+    }
+    setImporting(false);
   };
 
   const toggleWidgetHidden = (w) => {
@@ -267,6 +317,38 @@ export default function SettingsPage() {
             </button>
           )}
         </div>
+        <p className="text-[10px] text-slate-400 leading-relaxed">
+          Due promemoria fissi: 8:00 (task in scadenza oggi) e 20:00 (riepilogo
+          della giornata). Non arrivano nei "Giorni di riposo" scelti qui sotto.
+        </p>
+      </section>
+
+      {/* Giorni di riposo */}
+      <section className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm space-y-3">
+        <div className="flex items-center gap-3 px-1">
+          <CalendarOff className="w-5 h-5 text-rose-500" />
+          <p className="font-bold text-slate-800 text-sm uppercase tracking-wider">Giorni di riposo</p>
+        </div>
+        <p className="text-[10px] text-slate-400 leading-relaxed px-1">
+          Nei giorni scelti: niente notifiche e le scadenze a intervallo fisso
+          (es. "ogni 3 giorni") slittano al primo giorno libero successivo.
+          I task con giorni della settimana specifici non vengono spostati.
+        </p>
+        <div className="flex gap-1.5 flex-wrap px-1">
+          {WEEKDAYS_UI.map(w => (
+            <button
+              key={w.value}
+              onClick={() => toggleNoWorkDay(w.value)}
+              disabled={savingNoWorkDays}
+              className={clsx(
+                'w-11 py-1.5 rounded-xl text-xs font-bold transition-colors disabled:opacity-50',
+                noWorkDays.includes(w.value) ? 'bg-rose-500 text-white' : 'bg-slate-100 text-slate-600'
+              )}
+            >
+              {w.label}
+            </button>
+          ))}
+        </div>
       </section>
 
       {/* Preferenze Visuali */}
@@ -381,8 +463,8 @@ export default function SettingsPage() {
         </div>
         
         <div className="grid grid-cols-1 gap-2">
-          {['leaderboard', 'urgent', 'rooms'].map(w => (
-            <button 
+          {['leaderboard', 'urgent'].map(w => (
+            <button
               key={w}
               onClick={() => toggleWidgetHidden(w)}
               className={clsx(
@@ -390,7 +472,7 @@ export default function SettingsPage() {
                 !widgets.hidden.includes(w) ? "bg-white border-slate-200 text-slate-700 shadow-sm" : "bg-slate-50 border-transparent text-slate-400"
               )}
             >
-              {w === 'leaderboard' ? 'Punteggi' : w === 'urgent' ? 'Task Urgenti' : 'Stanze'}
+              {w === 'leaderboard' ? 'Punteggi' : 'Task Urgenti'}
               <div className={clsx("w-4 h-4 rounded-full border-2", !widgets.hidden.includes(w) ? "bg-primary border-primary" : "border-slate-300")} />
             </button>
           ))}
@@ -402,6 +484,38 @@ export default function SettingsPage() {
             {savingWidgets ? 'Salvataggio...' : 'Salva Visibilità'}
           </button>
         </div>
+      </section>
+
+      {/* Esporta/Importa Task */}
+      <section className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm space-y-3">
+        <div className="flex items-center gap-3 px-1">
+          <Download className="w-5 h-5 text-cyan-500" />
+          <p className="font-bold text-slate-800 text-sm uppercase tracking-wider">Stanze e Task</p>
+        </div>
+        <p className="text-[10px] text-slate-400 leading-relaxed px-1">
+          Esporta un file con stanze e task per non doverli reinserire a mano
+          ogni volta. Importare non cancella mai nulla: le stanze già esistenti
+          vengono riusate (per nome), i task vengono sempre aggiunti.
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={handleExportTasks}
+            className="flex items-center justify-center gap-2 py-3 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest active:scale-[0.98] transition-all"
+          >
+            <Download size={14} />
+            Esporta
+          </button>
+          <label className="flex items-center justify-center gap-2 py-3 bg-slate-100 text-slate-700 rounded-2xl font-black text-xs uppercase tracking-widest active:scale-[0.98] transition-all cursor-pointer">
+            <Upload size={14} />
+            {importing ? '...' : 'Importa'}
+            <input type="file" accept="application/json" onChange={handleImportTasks} disabled={importing} className="hidden" />
+          </label>
+        </div>
+        {importResult && (
+          <div className="bg-cyan-50 p-3 rounded-xl text-center">
+            <p className="text-xs font-bold text-cyan-800">{importResult}</p>
+          </div>
+        )}
       </section>
 
       {/* Test Mode Section */}

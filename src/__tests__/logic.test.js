@@ -8,6 +8,7 @@ import {
   nextDateForWeekdays,
   expandOccurrences,
   recurrenceLabel,
+  shiftPastNoWorkDays,
 } from '../logic/scheduling.js';
 import { generateIdempotencyKey } from '../logic/idempotency.js';
 
@@ -189,6 +190,31 @@ describe('scheduling.js', () => {
 
   it('should label weekday-based recurrence sorted', () => {
     expect(recurrenceLabel({ recurrence_days: [3, 1] })).toBe('Lun, Mer');
+  });
+
+  it('should leave a date untouched when no-work-days is empty', () => {
+    expect(shiftPastNoWorkDays('2026-07-01', [])).toBe('2026-07-01');
+  });
+
+  it('should shift a date forward past no-work-days', () => {
+    const dow = new Date('2026-07-01').getDay();
+    const result = shiftPastNoWorkDays('2026-07-01', [dow]);
+    expect(new Date(result).getDay()).not.toBe(dow);
+    const diffDays = (new Date(result) - new Date('2026-07-01')) / 86400000;
+    expect(diffDays).toBe(1);
+  });
+
+  it('should apply the no-work-day shift for interval recurrence but not weekday recurrence', () => {
+    const base = '2026-07-01';
+    const targetDow = new Date(base).getDay(); // task cadrebbe oggi
+    const intervalTask = { frequency_days: 0 };
+    const shifted = nextDueFromRecurrence(intervalTask, base, [targetDow]);
+    expect(shifted).not.toBe(base);
+
+    const weekdayTask = { recurrence_days: [targetDow] };
+    const notShifted = nextDueFromRecurrence(weekdayTask, base, [targetDow]);
+    // la ricorrenza per giorno della settimana è una scelta esplicita, non si sposta
+    expect(new Date(notShifted).getDay()).toBe(targetDow);
   });
 });
 
