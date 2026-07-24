@@ -151,10 +151,132 @@ describe('Store Module (locale)', () => {
     expect(after.next_performer_id).toBe(userB.id);
   });
 
-  it('should get rooms with completion percentage', async () => {
+  it('should get rooms with a task count', async () => {
+    await seed();
     const rooms = await store.getRooms();
     expect(rooms.length).toBeGreaterThan(0);
-    expect(rooms[0]).toHaveProperty('completion_percentage');
+    const seeded = rooms.find(r => r.task_count > 0);
+    expect(seeded).toBeDefined();
+    expect(seeded.task_count).toBe(1);
+  });
+
+  it('should create a task recurring on specific weekdays, ignoring frequency_days', async () => {
+    const rooms = await store.getRooms();
+    const roomId = rooms[0]?.id || 1;
+    const baseDow = new Date().getDay();
+    await store.createTask({
+      name: 'Weekday task',
+      room_ids: [roomId],
+      frequency_days: 30,
+      recurrence_days: [baseDow],
+      difficulty: 2,
+    });
+    const tasks = await store.getTasks();
+    const created = tasks.find(t => t.name === 'Weekday task');
+    expect(created.recurrence_days).toEqual([baseDow]);
+    expect(new Date(created.next_due_date).getDay()).toBe(baseDow);
+  });
+
+  it('should respect an explicit next_due_date override on creation', async () => {
+    const rooms = await store.getRooms();
+    const roomId = rooms[0]?.id || 1;
+    await store.createTask({
+      name: 'Custom start task',
+      room_ids: [roomId],
+      frequency_days: 7,
+      difficulty: 2,
+      next_due_date: '2027-01-15',
+    });
+    const tasks = await store.getTasks();
+    const created = tasks.find(t => t.name === 'Custom start task');
+    expect(created.next_due_date).toBe('2027-01-15');
+  });
+
+  it('should snooze a task forward without recording a completion', async () => {
+    await seed();
+    const tasks = await store.getTasks();
+    const task = tasks.find(t => t.name === 'Seed task');
+    const before = task.next_due_date;
+
+    await store.snoozeTask(task.id, 1);
+
+    const afterTasks = await store.getTasks();
+    const after = afterTasks.find(t => t.id === task.id);
+    const expected = new Date(before);
+    expected.setDate(expected.getDate() + 1);
+    expect(after.next_due_date).toBe(expected.toISOString().split('T')[0]);
+
+    const history = await store.getHistory(1);
+    expect(history.length).toBe(0); // nessun completamento registrato
+  });
+
+  // La penalità automatica salta i weekend: i test fissano l'orologio su
+  // un giorno feriale noto per non essere flaky se lanciati di sabato/domenica.
+  function nextWeekday(from) {
+    const d = new Date(from);
+    while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
+    d.setHours(12, 0, 0, 0);
+    return d;
+  }
+
+  it('should apply an automatic penalty for a task overdue by exactly 1 day', async () => {
+    await seed();
+    const tasks = await store.getTasks();
+    const task = tasks.find(t => t.name === 'Seed task');
+
+    const today = nextWeekday(new Date());
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    // assignment_type esplicito: 'ANY' (default di seed()) non ha un
+    // responsabile unico, la penalità automatica lo salta di proposito
+    // (stesso comportamento dell'originale HomeSync).
+    await store.updateTask(task.id, {
+      next_due_date: yesterday.toISOString().split('T')[0],
+      assignment_type: 'TOGETHER',
+    });
+
+    vi.useFakeTimers();
+    vi.setSystemTime(today);
+    try {
+      await store._checkOverduePenalties();
+    } finally {
+      vi.useRealTimers();
+    }
+
+    const history = await store.getHistory(30);
+    const penalty = history.find(h => h.task_name.includes('penalità'));
+    expect(penalty).toBeDefined();
+    expect(penalty.points_awarded).toBe(-1);
+  });
+
+  it('should not double-charge the same overdue threshold twice', async () => {
+    await seed();
+    const tasks = await store.getTasks();
+    const task = tasks.find(t => t.name === 'Seed task');
+
+    const today = nextWeekday(new Date());
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    // assignment_type esplicito: 'ANY' (default di seed()) non ha un
+    // responsabile unico, la penalità automatica lo salta di proposito
+    // (stesso comportamento dell'originale HomeSync).
+    await store.updateTask(task.id, {
+      next_due_date: yesterday.toISOString().split('T')[0],
+      assignment_type: 'TOGETHER',
+    });
+
+    vi.useFakeTimers();
+    vi.setSystemTime(today);
+    try {
+      await store._checkOverduePenalties();
+      await store._checkOverduePenalties(); // seconda chiamata, stesso giorno
+    } finally {
+      vi.useRealTimers();
+    }
+
+    const history = await store.getHistory(30);
+    const penalties = history.filter(h => h.task_name.includes('penalità'));
+    expect(penalties.length).toBe(1);
   });
 
   it('should get history', async () => {

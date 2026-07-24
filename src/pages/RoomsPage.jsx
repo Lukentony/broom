@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { store } from '../store';
 import PageHeader from '../components/PageHeader';
-import CircularProgress from '../components/CircularProgress';
 import { Plus, X, Pencil, Trash2, Home, Bath, ChefHat, Sofa, CheckSquare, BookOpen } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { clsx } from 'clsx';
@@ -72,13 +71,9 @@ export default function RoomsPage() {
                 <div className="flex-1 min-w-0">
                   <h3 className="font-bold text-slate-800">{room.name}</h3>
                   <p className="text-xs text-slate-400">
-                    {room.completion_percentage != null
-                      ? `${Math.round(room.completion_percentage)}% in regola`
-                      : 'Nessun task'}
+                    {room.task_count === 1 ? '1 task' : `${room.task_count} task`}
                   </p>
                 </div>
-
-                <CircularProgress percentage={room.completion_percentage ?? 0} size={44} />
 
                 <div className="flex flex-col gap-1.5 flex-shrink-0">
                   <button

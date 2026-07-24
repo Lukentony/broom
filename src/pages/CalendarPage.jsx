@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { parseISO, isSameDay, isToday, isPast, isTomorrow } from 'date-fns';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { store } from '../store';
+import { expandOccurrences } from '../logic/scheduling.js';
 import PageHeader from '../components/PageHeader';
 import { clsx } from 'clsx';
 
@@ -38,6 +39,18 @@ export default function CalendarPage() {
 
   const roomMap = Object.fromEntries(rooms.map(r => [r.id, r.name]));
 
+  // Proietta le occorrenze future di ogni task ricorrente (non solo la
+  // prossima scadenza), fino a 6 mesi / 30 occorrenze per task.
+  const occurrences = useMemo(() => {
+    const list = [];
+    for (const t of tasks) {
+      for (const date of expandOccurrences(t)) {
+        list.push({ task: t, date });
+      }
+    }
+    return list;
+  }, [tasks]);
+
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
   const firstDayOfMonth = new Date(year, month, 1);
@@ -51,9 +64,9 @@ export default function CalendarPage() {
   for (let i = 0; i < startOffset; i++) calendarCells.push(null);
   for (let d = 1; d <= daysInMonth; d++) calendarCells.push(new Date(year, month, d));
 
-  const tasksForDay = (day) => tasks.filter(t => isSameDay(parseISO(t.next_due_date), day));
+  const occurrencesForDay = (day) => occurrences.filter(o => isSameDay(parseISO(o.date), day));
 
-  const selectedTasks = selectedDay ? tasksForDay(selectedDay) : [];
+  const selectedOccurrences = selectedDay ? occurrencesForDay(selectedDay) : [];
 
   return (
     <div className="max-w-md mx-auto p-4 space-y-4 pb-24">
@@ -92,7 +105,7 @@ export default function CalendarPage() {
           {calendarCells.map((day, i) => {
             if (!day) return <div key={`empty-${i}`} />;
 
-            const dayTasks = tasksForDay(day);
+            const dayOccurrences = occurrencesForDay(day);
             const isCurrentDay = isToday(day);
             const isSelected = selectedDay && isSameDay(day, selectedDay);
 
@@ -113,12 +126,12 @@ export default function CalendarPage() {
                 )}>
                   {day.getDate()}
                 </span>
-                {dayTasks.length > 0 && (
+                {dayOccurrences.length > 0 && (
                   <div className="flex gap-0.5 mt-0.5 flex-wrap justify-center">
-                    {dayTasks.slice(0, 3).map((t, idx) => (
+                    {dayOccurrences.slice(0, 3).map((o, idx) => (
                       <div
                         key={idx}
-                        className={clsx('w-1.5 h-1.5 rounded-full', isSelected ? 'bg-white' : getDayColor(parseISO(t.next_due_date)))}
+                        className={clsx('w-1.5 h-1.5 rounded-full', isSelected ? 'bg-white' : getDayColor(parseISO(o.date)))}
                       />
                     ))}
                   </div>
@@ -156,11 +169,11 @@ export default function CalendarPage() {
             </button>
           </div>
 
-          {selectedTasks.length === 0
+          {selectedOccurrences.length === 0
             ? <p className="text-sm text-slate-400 text-center py-4">Nessun task in scadenza.</p>
-            : selectedTasks.map(task => (
-              <div key={task.id} className="flex items-center gap-3 py-2 border-b border-slate-50 last:border-0">
-                <div className={clsx('w-2 h-8 rounded-full flex-shrink-0', getDayColor(parseISO(task.next_due_date)))} />
+            : selectedOccurrences.map(({ task, date }, idx) => (
+              <div key={`${task.id}_${idx}`} className="flex items-center gap-3 py-2 border-b border-slate-50 last:border-0">
+                <div className={clsx('w-2 h-8 rounded-full flex-shrink-0', getDayColor(parseISO(date)))} />
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-slate-800 truncate text-sm">{task.name}</p>
                   {(task.room_ids || []).map(id => roomMap[id]).filter(Boolean).length > 0 && (

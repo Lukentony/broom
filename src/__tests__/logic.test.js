@@ -1,7 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { calculatePoints } from '../logic/scoring.js';
+import { calculatePoints, calculateOverduePenalty } from '../logic/scoring.js';
 import { determineNextPerformer } from '../logic/assignment.js';
-import { calculateNextDate, nextDueFromRecurrence, computeVacationShift } from '../logic/scheduling.js';
+import {
+  calculateNextDate,
+  nextDueFromRecurrence,
+  computeVacationShift,
+  nextDateForWeekdays,
+  expandOccurrences,
+  recurrenceLabel,
+} from '../logic/scheduling.js';
 import { generateIdempotencyKey } from '../logic/idempotency.js';
 
 describe('scoring.js — calculatePoints', () => {
@@ -50,6 +57,22 @@ describe('scoring.js — calculatePoints', () => {
     // 1 * 1 = 1, Math.max(1, 1 // 2) = max(1, 0) = 1
     expect(result.points).toBe(1);
     expect(result.isShared).toBe(true);
+  });
+});
+
+describe('scoring.js — calculateOverduePenalty', () => {
+  it('should return a 1-point penalty at exactly 1 day overdue', () => {
+    expect(calculateOverduePenalty(3, 1)).toBe(1);
+  });
+
+  it('should return difficulty*base penalty at exactly 3 days overdue', () => {
+    expect(calculateOverduePenalty(3, 3, 10)).toBe(30);
+  });
+
+  it('should return 0 for delays other than 1 or 3', () => {
+    expect(calculateOverduePenalty(3, 0)).toBe(0);
+    expect(calculateOverduePenalty(3, 2)).toBe(0);
+    expect(calculateOverduePenalty(3, 5)).toBe(0);
   });
 });
 
@@ -108,6 +131,64 @@ describe('scheduling.js', () => {
     expect(computeVacationShift(5)).toBe(5);
     expect(computeVacationShift(0)).toBe(0);
     expect(computeVacationShift(-1)).toBe(0);
+  });
+
+  it('should find the next date matching a weekday, never the same day', () => {
+    const base = '2026-07-01';
+    const baseDow = new Date(base).getDay();
+    const result = nextDateForWeekdays(base, [baseDow]);
+    expect(result).not.toBe(base);
+    expect(new Date(result).getDay()).toBe(baseDow);
+    const diffDays = (new Date(result) - new Date(base)) / 86400000;
+    expect(diffDays).toBe(7);
+  });
+
+  it('should find the closest matching weekday within the next 7 days', () => {
+    const base = '2026-07-01';
+    const baseDow = new Date(base).getDay();
+    const targetDow = (baseDow + 2) % 7;
+    const result = nextDateForWeekdays(base, [targetDow]);
+    expect(new Date(result).getDay()).toBe(targetDow);
+    const diffDays = (new Date(result) - new Date(base)) / 86400000;
+    expect(diffDays).toBeGreaterThan(0);
+    expect(diffDays).toBeLessThanOrEqual(7);
+  });
+
+  it('should use recurrence_days over frequency_days when both are present', () => {
+    const base = '2026-07-01';
+    const baseDow = new Date(base).getDay();
+    const task = { frequency_days: 30, recurrence_days: [baseDow] };
+    const result = nextDueFromRecurrence(task, base);
+    expect(new Date(result).getDay()).toBe(baseDow);
+    const diffDays = (new Date(result) - new Date(base)) / 86400000;
+    expect(diffDays).toBe(7);
+  });
+
+  it('should expand interval-based recurrence into multiple future dates', () => {
+    const task = { next_due_date: '2026-07-01', frequency_days: 7 };
+    const dates = expandOccurrences(task, { maxCount: 4 });
+    expect(dates).toEqual(['2026-07-01', '2026-07-08', '2026-07-15', '2026-07-22']);
+  });
+
+  it('should not expand a one-off task beyond its single date', () => {
+    const task = { next_due_date: '2026-07-01', frequency_days: 0 };
+    const dates = expandOccurrences(task);
+    expect(dates).toEqual(['2026-07-01']);
+  });
+
+  it('should stop expanding at maxDate', () => {
+    const task = { next_due_date: '2026-07-01', frequency_days: 7 };
+    const dates = expandOccurrences(task, { maxDate: '2026-07-20', maxCount: 100 });
+    expect(dates).toEqual(['2026-07-01', '2026-07-08', '2026-07-15']);
+  });
+
+  it('should label interval-based recurrence', () => {
+    expect(recurrenceLabel({ frequency_days: 7 })).toBe('ogni 7g');
+    expect(recurrenceLabel({ frequency_days: 0 })).toBe('una tantum');
+  });
+
+  it('should label weekday-based recurrence sorted', () => {
+    expect(recurrenceLabel({ recurrence_days: [3, 1] })).toBe('Lun, Mer');
   });
 });
 

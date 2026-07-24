@@ -3,7 +3,7 @@
 // Interfaccia identica (Promise-based) per minimizzare modifiche alle pagine
 
 import * as A from '@automerge/automerge';
-import { calculatePoints } from './logic/scoring.js';
+import { calculatePoints, calculateOverduePenalty } from './logic/scoring.js';
 import { calculateNextDate, nextDueFromRecurrence } from './logic/scheduling.js';
 import { determineNextPerformer } from './logic/assignment.js';
 import { createStorageAdapter, STORAGE_KEYS } from './storage.js';
@@ -70,6 +70,7 @@ function initDoc() {
 
 // === Stato ===
 let doc = loadDoc() || initDoc();
+doc = A.change(doc, 'check-overdue-penalties', checkOverduePenalties);
 scheduleSave(doc);
 
 // === Helpers ===
@@ -117,6 +118,75 @@ function getUserAB(d) {
   return { userAId: active[0]?.id ?? null, userBId: active[1]?.id ?? null };
 }
 
+function isVacationMode() {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    const settings = raw ? JSON.parse(raw) : {};
+    return settings.vacation_mode === 'true';
+  } catch {
+    return false;
+  }
+}
+
+// Penalità automatica sui task lasciati scaduti senza completarli (mai
+// tirati indietro se completati): soglie fisse a 1 e 3 giorni di ritardo,
+// una volta sola per soglia per ciclo di scadenza (task.penalized_delays,
+// resettato ogni volta che next_due_date cambia). A differenza del cron
+// notturno dell'originale (server sempre acceso), qui il controllo gira
+// alla prossima apertura dell'app — se un task supera 3gg senza che l'app
+// venga aperta, alla riapertura vengono applicate comunque entrambe le
+// soglie mancanti (non "perse" come sarebbe con un controllo che guarda
+// solo il ritardo esatto di oggi).
+function checkOverduePenalties(d) {
+  if (isVacationMode()) return;
+  const today = new Date();
+  if (today.getDay() === 0 || today.getDay() === 6) return; // weekend
+
+  const todayStr = todayISO();
+  const { userAId, userBId } = getUserAB(d);
+  const active = getActiveUsers(d);
+
+  d.tasks.forEach(t => {
+    if (t.is_active === false || t.is_quick_action) return;
+    const due = new Date(t.next_due_date);
+    const delayDays = Math.floor((new Date(todayStr) - due) / 86400000);
+    if (delayDays < 1) return;
+
+    const penalized = Array.isArray(t.penalized_delays) ? t.penalized_delays : [];
+    if (!t.penalized_delays) t.penalized_delays = penalized;
+
+    for (const threshold of [1, 3]) {
+      if (delayDays < threshold || penalized.includes(threshold)) continue;
+      const penalty = calculateOverduePenalty(t.difficulty, threshold);
+      if (penalty <= 0) continue;
+
+      let targets = [];
+      if (t.assignment_type === 'TOGETHER') targets = active.map(u => u.id);
+      else if (['FIXED_A', 'FIXED_B', 'ALTERNATING'].includes(t.assignment_type)) {
+        const assigned = determineNextPerformer(t.assignment_type, t.last_performer_id, userAId, userBId);
+        if (assigned != null) targets = [assigned];
+      }
+      // ANY: nessun responsabile singolo, nessuna penalità (come l'originale)
+
+      for (const uid of targets) {
+        d.completions.push({
+          id: completionId(),
+          task_id: t.id,
+          user_id: uid,
+          completed_at: nowISO(),
+          points_awarded: -penalty,
+          was_on_demand: false,
+          was_automated: true,
+          is_shared: t.assignment_type === 'TOGETHER',
+          task_name: `${t.name} — penalità ritardo`,
+          user_name: null,
+        });
+      }
+      penalized.push(threshold);
+    }
+  });
+}
+
 // --- Mutazioni (ritornano il doc aggiornato) ---
 
 function mutate(fn) {
@@ -157,23 +227,31 @@ export const store = {
       const roomIds = Array.isArray(data.room_ids)
         ? data.room_ids
         : (data.room_id != null ? [data.room_id] : []);
+      const recurrenceDays = Array.isArray(data.recurrence_days) && data.recurrence_days.length > 0
+        ? data.recurrence_days
+        : null;
       const task = {
         id,
         room_ids: roomIds,
         name: data.name,
         frequency_days: data.frequency_days,
+        recurrence_days: recurrenceDays,
         difficulty: data.difficulty,
         assignment_type: assignmentType,
         grace_period_days: data.grace_period_days || 0,
-        // La prima scadenza rispetta la frequenza scelta invece di essere
-        // sempre "oggi" (frequency_days=0 → calculateNextDate non sposta la
-        // data, quindi "una tantum" resta comunque dovuto subito).
-        next_due_date: calculateNextDate(todayISO(), data.frequency_days),
+        // Se non specificata esplicitamente, la prima scadenza rispetta la
+        // ricorrenza scelta invece di essere sempre "oggi" (frequency_days=0
+        // → calculateNextDate non sposta la data, "una tantum" resta dovuto
+        // subito; recurrence_days → prossimo giorno della settimana scelto).
+        next_due_date: data.next_due_date || (recurrenceDays
+          ? nextDueFromRecurrence({ recurrence_days: recurrenceDays }, todayISO())
+          : calculateNextDate(todayISO(), data.frequency_days)),
         is_active: true,
         is_quick_action: false,
         tags: data.tags || null,
         last_performer_id: null,
         next_performer_id: determineNextPerformer(assignmentType, null, userAId, userBId),
+        penalized_delays: [],
         created_at: nowISO(),
       };
       d.tasks.push(task);
@@ -188,14 +266,31 @@ export const store = {
       if (data.name !== undefined) task.name = data.name;
       if (data.room_ids !== undefined) task.room_ids = data.room_ids;
       else if (data.room_id !== undefined) task.room_ids = [data.room_id];
-      if (data.frequency_days !== undefined && data.frequency_days !== task.frequency_days) {
-        // Cambiare la frequenza deve avere effetto subito, non solo dopo il
-        // prossimo completamento — altrimenti sembra che non faccia nulla.
-        task.frequency_days = data.frequency_days;
-        task.next_due_date = calculateNextDate(todayISO(), data.frequency_days);
-      } else if (data.frequency_days !== undefined) {
-        task.frequency_days = data.frequency_days;
+
+      const recurrenceChanged = data.recurrence_days !== undefined
+        && JSON.stringify(data.recurrence_days || null) !== JSON.stringify(task.recurrence_days || null);
+      if (data.recurrence_days !== undefined) {
+        task.recurrence_days = Array.isArray(data.recurrence_days) && data.recurrence_days.length > 0
+          ? data.recurrence_days
+          : null;
       }
+
+      const freqChanged = data.frequency_days !== undefined && data.frequency_days !== task.frequency_days;
+      if (data.frequency_days !== undefined) task.frequency_days = data.frequency_days;
+
+      if (data.next_due_date !== undefined) {
+        // Data di scadenza scelta esplicitamente dall'utente: vince su tutto.
+        task.next_due_date = data.next_due_date;
+        task.penalized_delays = [];
+      } else if (freqChanged || recurrenceChanged) {
+        // Cambiare la ricorrenza deve avere effetto subito, non solo dopo il
+        // prossimo completamento — altrimenti sembra che non faccia nulla.
+        task.next_due_date = task.recurrence_days
+          ? nextDueFromRecurrence(task, todayISO())
+          : calculateNextDate(todayISO(), task.frequency_days);
+        task.penalized_delays = [];
+      }
+
       if (data.difficulty !== undefined) task.difficulty = data.difficulty;
       if (data.assignment_type !== undefined) task.assignment_type = data.assignment_type;
       if (data.tags !== undefined) task.tags = data.tags;
@@ -256,6 +351,7 @@ export const store = {
 
       // Ricalcola prossima scadenza
       t.next_due_date = nextDueFromRecurrence(t, baseDate);
+      t.penalized_delays = [];
 
       // Aggiorna ultimo esecutore e calcola a chi tocca il prossimo giro
       t.last_performer_id = userId;
@@ -301,6 +397,18 @@ export const store = {
         // Nessun completamento precedente: inverte l'effetto dell'ultimo completamento
         task.next_due_date = calculateNextDate(task.next_due_date, -task.frequency_days);
       }
+      task.penalized_delays = [];
+    });
+    return Promise.resolve({ success: true });
+  },
+
+  /** Rinvia un task di N giorni senza registrare un completamento */
+  snoozeTask(id, days = 1) {
+    mutate(d => {
+      const task = d.tasks.find(t => t.id === id);
+      if (!task) return;
+      task.next_due_date = calculateNextDate(task.next_due_date, days);
+      task.penalized_delays = [];
     });
     return Promise.resolve({ success: true });
   },
@@ -312,6 +420,7 @@ export const store = {
       d.tasks.forEach(t => {
         if (t.is_active !== false) {
           t.next_due_date = today;
+          t.penalized_delays = [];
         }
       });
     });
@@ -362,14 +471,8 @@ export const store = {
     const rooms = doc.rooms
       .filter(r => r.is_active !== false)
       .map(r => {
-        // Percentuale di task "in regola" (non in ritardo) nella stanza —
-        // NON è una percentuale di task mai completati almeno una volta.
         const roomTasks = doc.tasks.filter(t => getRoomIds(t).includes(r.id) && t.is_active !== false);
-        const onTrack = roomTasks.filter(t => t.next_due_date >= todayISO());
-        const completion_percentage = roomTasks.length > 0
-          ? Math.round((onTrack.length / roomTasks.length) * 100)
-          : null;
-        return { ...r, completion_percentage };
+        return { ...r, task_count: roomTasks.length };
       });
     return Promise.resolve(rooms);
   },
@@ -609,7 +712,7 @@ export const store = {
           const bytes = new Uint8Array(arr);
           const loaded = A.load(bytes);
           if (loaded) {
-            doc = loaded;
+            doc = A.change(loaded, 'check-overdue-penalties', checkOverduePenalties);
             localStorage.setItem(STORAGE_KEY, raw);
           }
         }
@@ -625,6 +728,12 @@ export const store = {
   _reload() {
     doc = loadDoc() || initDoc();
     return Promise.resolve(doc);
+  },
+
+  /** Solo per test: esegue subito il controllo penalità overdue */
+  _checkOverduePenalties() {
+    mutate(d => checkOverduePenalties(d));
+    return Promise.resolve({ success: true });
   },
 };
 

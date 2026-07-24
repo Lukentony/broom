@@ -1,6 +1,7 @@
 import { differenceInCalendarDays, isPast, isToday, isTomorrow, parseISO } from 'date-fns';
 import { CheckCircle2, Clock } from 'lucide-react';
 import { clsx } from 'clsx';
+import { recurrenceLabel } from '../logic/scheduling.js';
 
 function getUrgency(dueDate) {
   if (isPast(dueDate) && !isToday(dueDate)) return 'overdue';
@@ -72,7 +73,7 @@ export default function TaskCard({ task, roomNames, performerName, onComplete, o
             <span className="text-xs text-slate-300">· {roomLabel}</span>
           )}
           <span className="text-xs text-slate-300">
-            · {task.frequency_days === 0 ? 'una tantum' : `ogni ${task.frequency_days}g`} · {task.assignment_type === 'TOGETHER' ? 'Insieme' : task.assignment_type === 'FIXED_A' ? 'Fisso A' : task.assignment_type === 'FIXED_B' ? 'Fisso B' : task.assignment_type === 'ALTERNATING' ? 'Alternato' : 'Chiunque'}
+            · {recurrenceLabel(task)} · {task.assignment_type === 'TOGETHER' ? 'Insieme' : task.assignment_type === 'FIXED_A' ? 'Fisso A' : task.assignment_type === 'FIXED_B' ? 'Fisso B' : task.assignment_type === 'ALTERNATING' ? 'Alternato' : 'Chiunque'}
           </span>
           {performerName && (
             <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase bg-indigo-100 text-indigo-700">

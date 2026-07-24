@@ -46,3 +46,19 @@ export function calculatePoints(
 
   return { points, isShared: false };
 }
+
+/**
+ * Penalità automatica per un task lasciato scaduto senza completarlo
+ * (diverso da calculatePoints: quello premia un completamento tardivo,
+ * questo punisce il *non* completamento). Soglie fisse a 1 e 3 giorni di
+ * ritardo, oltre non si accumula altro.
+ * @param {number} difficulty - Difficoltà (1-5)
+ * @param {number} delayDays - Giorni di ritardo
+ * @param {number} [scoringBase=10] - Moltiplicatore base
+ * @returns {number} Punti da sottrarre (0 se la soglia non è 1 o 3)
+ */
+export function calculateOverduePenalty(difficulty, delayDays, scoringBase = 10) {
+  if (delayDays === 1) return 1;
+  if (delayDays === 3) return difficulty * scoringBase;
+  return 0;
+}
