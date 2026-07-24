@@ -67,14 +67,14 @@ export default function Dashboard() {
 
         return (
           <Link key="leaderboard" to="/score" className="block">
-            <div className="bg-gradient-to-br from-primary to-blue-700 p-5 rounded-[2.5rem] text-white shadow-lg shadow-primary/20 flex items-center justify-between group active:scale-[0.98] transition-all">
+            <div className="bg-gradient-to-br from-primary to-primary-dark p-5 rounded-[2.5rem] text-white shadow-lg shadow-primary/20 flex items-center justify-between group active:scale-[0.98] transition-all">
               <div className="flex items-center gap-4">
-                <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-md text-yellow-300">
+                <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-md text-soon">
                   <Trophy size={24} />
                 </div>
                 <div>
                   <h3 className="font-black text-lg leading-tight tracking-tight">Punteggi</h3>
-                  <p className="text-xs text-blue-100 font-medium opacity-80">
+                  <p className="text-xs text-primary-soft font-medium opacity-80">
                     {!stats ? 'Caricamento...' : 
                      isTie ? 'Pareggio questa settimana! ⚔️' : 
                      `${winner?.user_name} è in testa! 🏆`}
@@ -89,8 +89,8 @@ export default function Dashboard() {
       case 'urgent':
         return (
           <div key="urgent" className="space-y-3">
-            <h3 className="font-bold text-slate-800 text-lg px-1 pt-2">Task Urgenti</h3>
-            {loading ? <div className="text-center py-10 text-slate-400">Caricamento...</div> :
+            <h3 className="font-bold text-ink text-lg px-1 pt-2">Task Urgenti</h3>
+            {loading ? <div className="text-center py-10 text-ink3">Caricamento...</div> :
              tasks.length === 0 ? <EmptyState text="Nessun task in scadenza. Ottimo! ✨" /> :
              tasks.map(task => (
               <TaskCard
@@ -133,5 +133,5 @@ export default function Dashboard() {
 }
 
 function EmptyState({ text }) {
-  return <div className="text-center py-12 text-slate-400">{text}</div>;
+  return <div className="text-center py-12 text-ink3">{text}</div>;
 }

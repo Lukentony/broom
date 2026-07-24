@@ -7,7 +7,7 @@ export default function VacationBanner() {
   if (settings.vacation_mode !== 'true') return null;
 
   return (
-    <div className="bg-accent-vacation p-3 rounded-xl flex items-center gap-3 text-amber-900 border border-amber-200/50 mb-4 animate-pulse">
+    <div className="bg-accent-vacation p-3 rounded-xl flex items-center gap-3 text-soon-ink border border-soon-soft/50 mb-4 animate-pulse">
       <Plane className="w-5 h-5 flex-shrink-0" />
       <div className="text-xs">
         <p className="font-bold uppercase tracking-tight">Modalità Vacanza Attiva</p>

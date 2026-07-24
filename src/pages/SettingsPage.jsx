@@ -209,27 +209,27 @@ export default function SettingsPage() {
       <PageHeader title="Impostazioni" subtitle="Gestisci la casa" />
 
       {/* Account */}
-      <section className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm space-y-4">
+      <section className="bg-white p-5 rounded-[2rem] border border-hairline shadow-sm space-y-4">
         <div className="flex items-center gap-3">
           <div className="p-3 rounded-2xl bg-primary/10 text-primary">
             <UserCircle className="w-6 h-6" />
           </div>
           <div className="flex-1">
-            <p className="font-bold text-slate-800 tracking-tight">Il tuo Profilo</p>
-            <p className="text-xs text-slate-400 font-medium">Device Identity</p>
+            <p className="font-bold text-ink tracking-tight">Il tuo Profilo</p>
+            <p className="text-xs text-ink3 font-medium">Device Identity</p>
           </div>
         </div>
         
-        <div className="flex items-center justify-between bg-slate-50 p-4 rounded-2xl border border-slate-100">
+        <div className="flex items-center justify-between bg-background-sunken p-4 rounded-2xl border border-hairline">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center font-black text-primary border border-slate-200">
+            <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center font-black text-primary border border-hairline">
               {currentUser?.user_name?.charAt(0) || '?'}
             </div>
-            <span className="font-bold text-slate-700">{currentUser?.user_name || 'Caricamento...'}</span>
+            <span className="font-bold text-ink2">{currentUser?.user_name || 'Caricamento...'}</span>
           </div>
           <button 
             onClick={handleLogout}
-            className="flex items-center gap-2 text-xs font-black text-red-500 bg-red-50 px-4 py-2 rounded-xl active:scale-95 transition-transform"
+            className="flex items-center gap-2 text-xs font-black text-urgent bg-urgent-soft px-4 py-2 rounded-xl active:scale-95 transition-transform"
           >
             <LogOut size={14} />
             Cambia
@@ -238,18 +238,18 @@ export default function SettingsPage() {
       </section>
 
       {/* Utenti */}
-      <section className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm space-y-4">
+      <section className="bg-white p-5 rounded-[2rem] border border-hairline shadow-sm space-y-4">
         <div className="flex items-center gap-3 px-1">
-          <Users className="w-5 h-5 text-indigo-500" />
-          <p className="font-bold text-slate-800 text-sm uppercase tracking-wider">Gestione Nomi</p>
+          <Users className="w-5 h-5 text-primary" />
+          <p className="font-bold text-ink text-sm uppercase tracking-wider">Gestione Nomi</p>
         </div>
         <div className="space-y-2">
           {users.map(u => (
-            <div key={u.user_id} className="flex justify-between items-center p-3 hover:bg-slate-50 rounded-2xl transition-colors group">
-              <span className="font-bold text-slate-700 text-sm">{u.user_name}</span>
+            <div key={u.user_id} className="flex justify-between items-center p-3 hover:bg-background-sunken rounded-2xl transition-colors group">
+              <span className="font-bold text-ink2 text-sm">{u.user_name}</span>
               <button
                 onClick={() => setUserToRename(u)}
-                className="text-xs text-indigo-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity"
+                className="text-xs text-primary font-bold opacity-0 group-hover:opacity-100 transition-opacity"
               >
                 Modifica
               </button>
@@ -266,7 +266,7 @@ export default function SettingsPage() {
               placeholder="Nome nuovo utente"
               autoFocus
               disabled={savingNewUser}
-              className="flex-1 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+              className="flex-1 border border-hairline rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
             />
             <button
               onClick={handleAddUser}
@@ -277,7 +277,7 @@ export default function SettingsPage() {
             </button>
             <button
               onClick={() => { setAddingUser(false); setNewUserName(''); }}
-              className="px-3 py-2.5 bg-slate-100 text-slate-500 text-xs font-black rounded-xl"
+              className="px-3 py-2.5 bg-background-sunken text-ink2 text-xs font-black rounded-xl"
             >
               Annulla
             </button>
@@ -285,7 +285,7 @@ export default function SettingsPage() {
         ) : (
           <button
             onClick={() => setAddingUser(true)}
-            className="w-full flex items-center justify-center gap-2 py-2.5 text-indigo-600 bg-indigo-50 rounded-2xl font-black text-xs uppercase tracking-widest active:scale-[0.98] transition-all"
+            className="w-full flex items-center justify-center gap-2 py-2.5 text-primary bg-primary-soft rounded-2xl font-black text-xs uppercase tracking-widest active:scale-[0.98] transition-all"
           >
             <UserPlus size={14} />
             Aggiungi utente
@@ -294,15 +294,15 @@ export default function SettingsPage() {
       </section>
 
       {/* Notifiche */}
-      <section className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm space-y-3">
+      <section className="bg-white p-5 rounded-[2rem] border border-hairline shadow-sm space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className={clsx('p-3 rounded-2xl', notifStatus === 'granted' ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400')}>
+            <div className={clsx('p-3 rounded-2xl', notifStatus === 'granted' ? 'bg-sage-soft text-sage-ink' : 'bg-background-sunken text-ink3')}>
               <Bell className="w-5 h-5" />
             </div>
             <div>
-              <p className="font-bold text-slate-800 tracking-tight">Notifiche</p>
-              <p className="text-[10px] text-slate-400 font-medium">
+              <p className="font-bold text-ink tracking-tight">Notifiche</p>
+              <p className="text-[10px] text-ink3 font-medium">
                 {notifStatus === 'granted' ? 'Attive' : notifStatus === 'denied' ? 'Negate dal sistema' : 'Promemoria mattina/sera'}
               </p>
             </div>
@@ -317,19 +317,19 @@ export default function SettingsPage() {
             </button>
           )}
         </div>
-        <p className="text-[10px] text-slate-400 leading-relaxed">
+        <p className="text-[10px] text-ink3 leading-relaxed">
           Due promemoria fissi: 8:00 (task in scadenza oggi) e 20:00 (riepilogo
           della giornata). Non arrivano nei "Giorni di riposo" scelti qui sotto.
         </p>
       </section>
 
       {/* Giorni di riposo */}
-      <section className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm space-y-3">
+      <section className="bg-white p-5 rounded-[2rem] border border-hairline shadow-sm space-y-3">
         <div className="flex items-center gap-3 px-1">
-          <CalendarOff className="w-5 h-5 text-rose-500" />
-          <p className="font-bold text-slate-800 text-sm uppercase tracking-wider">Giorni di riposo</p>
+          <CalendarOff className="w-5 h-5 text-urgent" />
+          <p className="font-bold text-ink text-sm uppercase tracking-wider">Giorni di riposo</p>
         </div>
-        <p className="text-[10px] text-slate-400 leading-relaxed px-1">
+        <p className="text-[10px] text-ink3 leading-relaxed px-1">
           Nei giorni scelti: niente notifiche e le scadenze a intervallo fisso
           (es. "ogni 3 giorni") slittano al primo giorno libero successivo.
           I task con giorni della settimana specifici non vengono spostati.
@@ -342,7 +342,7 @@ export default function SettingsPage() {
               disabled={savingNoWorkDays}
               className={clsx(
                 'w-11 py-1.5 rounded-xl text-xs font-bold transition-colors disabled:opacity-50',
-                noWorkDays.includes(w.value) ? 'bg-rose-500 text-white' : 'bg-slate-100 text-slate-600'
+                noWorkDays.includes(w.value) ? 'bg-urgent text-white' : 'bg-background-sunken text-ink2'
               )}
             >
               {w.label}
@@ -352,14 +352,14 @@ export default function SettingsPage() {
       </section>
 
       {/* Preferenze Visuali */}
-      <section className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm space-y-4">
+      <section className="bg-white p-5 rounded-[2rem] border border-hairline shadow-sm space-y-4">
         <div className="flex items-center gap-3 px-1">
-          <Settings className="w-5 h-5 text-sky-500" />
-          <p className="font-bold text-slate-800 text-sm uppercase tracking-wider">Preferenze</p>
+          <Settings className="w-5 h-5 text-primary" />
+          <p className="font-bold text-ink text-sm uppercase tracking-wider">Preferenze</p>
         </div>
         
         <div className="space-y-4">
-          <label className="flex items-center justify-between text-sm font-semibold text-slate-700">
+          <label className="flex items-center justify-between text-sm font-semibold text-ink2">
             Colori urgenza
             <input 
               type="checkbox" 
@@ -369,18 +369,18 @@ export default function SettingsPage() {
             />
           </label>
           <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold text-slate-700">Giorni anticipo</span>
+            <span className="text-sm font-semibold text-ink2">Giorni anticipo</span>
             <input 
               type="number" 
               value={prefs.early_completion_days} 
               onChange={(e) => setPrefs(p => ({ ...p, early_completion_days: e.target.value }))}
-              className="w-14 px-2 py-2 text-center bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-sm"
+              className="w-14 px-2 py-2 text-center bg-background-sunken border border-hairline rounded-xl outline-none font-bold text-sm"
             />
           </div>
           <button 
             onClick={handleSavePrefs}
             disabled={savingPrefs}
-            className="w-full flex items-center justify-center gap-2 py-3 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest active:scale-[0.98] transition-all disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-2 py-3 bg-ink text-white rounded-2xl font-black text-xs uppercase tracking-widest active:scale-[0.98] transition-all disabled:opacity-50"
           >
             {savingPrefs ? 'Salvataggio...' : 'Salva preferenze'}
           </button>
@@ -388,25 +388,25 @@ export default function SettingsPage() {
       </section>
 
       {/* Regole Punteggio */}
-      <section className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm space-y-4">
+      <section className="bg-white p-5 rounded-[2rem] border border-hairline shadow-sm space-y-4">
         <div className="flex items-center gap-3 px-1">
-          <Award className="w-5 h-5 text-amber-500" />
-          <p className="font-bold text-slate-800 text-sm uppercase tracking-wider">Regole Punteggio</p>
+          <Award className="w-5 h-5 text-soon" />
+          <p className="font-bold text-ink text-sm uppercase tracking-wider">Regole Punteggio</p>
         </div>
         
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold text-slate-700">Moltiplicatore punti base</span>
+            <span className="text-sm font-semibold text-ink2">Moltiplicatore punti base</span>
             <input 
               type="number" 
               min={1}
               max={100}
               value={scoringBase} 
               onChange={(e) => setScoringBase(parseInt(e.target.value, 10) || 1)}
-              className="w-16 px-2 py-2 text-center bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-sm"
+              className="w-16 px-2 py-2 text-center bg-background-sunken border border-hairline rounded-xl outline-none font-bold text-sm"
             />
           </div>
-          <label className="flex items-center justify-between text-sm font-semibold text-slate-700">
+          <label className="flex items-center justify-between text-sm font-semibold text-ink2">
             Dividi punti condivisi
             <input 
               type="checkbox" 
@@ -418,7 +418,7 @@ export default function SettingsPage() {
           <button 
             onClick={handleSaveScoring}
             disabled={savingScoring}
-            className="w-full flex items-center justify-center gap-2 py-3 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest active:scale-[0.98] transition-all disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-2 py-3 bg-ink text-white rounded-2xl font-black text-xs uppercase tracking-widest active:scale-[0.98] transition-all disabled:opacity-50"
           >
             {savingScoring ? 'Salvataggio...' : 'Salva regole'}
           </button>
@@ -426,29 +426,29 @@ export default function SettingsPage() {
       </section>
 
       {/* Modalità Vacanza */}
-      <section className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm space-y-3">
+      <section className="bg-white p-5 rounded-[2rem] border border-hairline shadow-sm space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className={clsx("p-3 rounded-2xl", settings.vacation_mode === 'true' ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-400')}>
+            <div className={clsx("p-3 rounded-2xl", settings.vacation_mode === 'true' ? 'bg-soon-soft text-soon-ink' : 'bg-background-sunken text-ink3')}>
               <Plane className="w-5 h-5" />
             </div>
             <div>
-              <p className="font-bold text-slate-800 tracking-tight">Modalità Vacanza</p>
-              <p className="text-[10px] text-slate-400 font-medium">Congela le scadenze</p>
+              <p className="font-bold text-ink tracking-tight">Modalità Vacanza</p>
+              <p className="text-[10px] text-ink3 font-medium">Congela le scadenze</p>
             </div>
           </div>
           <button
             disabled={vacationLoading}
             onClick={handleVacationToggle}
-            className={clsx("w-14 h-8 rounded-full transition-colors relative", settings.vacation_mode === 'true' ? 'bg-primary' : 'bg-slate-200')}
+            className={clsx("w-14 h-8 rounded-full transition-colors relative", settings.vacation_mode === 'true' ? 'bg-primary' : 'bg-background-sunken')}
           >
             <div className={clsx("absolute top-1 w-6 h-6 bg-white rounded-full shadow-sm transition-all", settings.vacation_mode === 'true' ? 'left-7' : 'left-1')} />
           </button>
         </div>
         {settings.vacation_mode === 'true' && (
-          <div className="bg-amber-50 p-3 rounded-2xl border border-amber-100">
-            <p className="text-[10px] text-amber-700 font-bold leading-tight uppercase tracking-wider">Vacanza attiva</p>
-            <p className="text-[10px] text-amber-600/80 font-medium mt-1">
+          <div className="bg-soon-soft p-3 rounded-2xl border border-soon-soft">
+            <p className="text-[10px] text-soon-ink font-bold leading-tight uppercase tracking-wider">Vacanza attiva</p>
+            <p className="text-[10px] text-soon-ink/80 font-medium mt-1">
               Al ritorno le scadenze verranno riprogrammate automaticamente.
             </p>
           </div>
@@ -456,10 +456,10 @@ export default function SettingsPage() {
       </section>
 
       {/* Widget Home */}
-      <section className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm space-y-4">
+      <section className="bg-white p-5 rounded-[2rem] border border-hairline shadow-sm space-y-4">
         <div className="flex items-center gap-3 px-1">
-          <Layout className="w-5 h-5 text-teal-500" />
-          <p className="font-bold text-slate-800 text-sm uppercase tracking-wider">Widget Dashboard</p>
+          <Layout className="w-5 h-5 text-sage" />
+          <p className="font-bold text-ink text-sm uppercase tracking-wider">Widget Dashboard</p>
         </div>
         
         <div className="grid grid-cols-1 gap-2">
@@ -469,17 +469,17 @@ export default function SettingsPage() {
               onClick={() => toggleWidgetHidden(w)}
               className={clsx(
                 "flex items-center justify-between p-3 rounded-2xl border transition-all text-sm font-bold capitalize",
-                !widgets.hidden.includes(w) ? "bg-white border-slate-200 text-slate-700 shadow-sm" : "bg-slate-50 border-transparent text-slate-400"
+                !widgets.hidden.includes(w) ? "bg-white border-hairline text-ink2 shadow-sm" : "bg-background-sunken border-transparent text-ink3"
               )}
             >
               {w === 'leaderboard' ? 'Punteggi' : 'Task Urgenti'}
-              <div className={clsx("w-4 h-4 rounded-full border-2", !widgets.hidden.includes(w) ? "bg-primary border-primary" : "border-slate-300")} />
+              <div className={clsx("w-4 h-4 rounded-full border-2", !widgets.hidden.includes(w) ? "bg-primary border-primary" : "border-hairline")} />
             </button>
           ))}
           <button 
             onClick={handleSaveWidgets}
             disabled={savingWidgets}
-            className="w-full py-3 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest mt-2 active:scale-[0.98] transition-all disabled:opacity-50"
+            className="w-full py-3 bg-ink text-white rounded-2xl font-black text-xs uppercase tracking-widest mt-2 active:scale-[0.98] transition-all disabled:opacity-50"
           >
             {savingWidgets ? 'Salvataggio...' : 'Salva Visibilità'}
           </button>
@@ -487,12 +487,12 @@ export default function SettingsPage() {
       </section>
 
       {/* Esporta/Importa Task */}
-      <section className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm space-y-3">
+      <section className="bg-white p-5 rounded-[2rem] border border-hairline shadow-sm space-y-3">
         <div className="flex items-center gap-3 px-1">
-          <Download className="w-5 h-5 text-cyan-500" />
-          <p className="font-bold text-slate-800 text-sm uppercase tracking-wider">Stanze e Task</p>
+          <Download className="w-5 h-5 text-primary" />
+          <p className="font-bold text-ink text-sm uppercase tracking-wider">Stanze e Task</p>
         </div>
-        <p className="text-[10px] text-slate-400 leading-relaxed px-1">
+        <p className="text-[10px] text-ink3 leading-relaxed px-1">
           Esporta un file con stanze e task per non doverli reinserire a mano
           ogni volta. Importare non cancella mai nulla: le stanze già esistenti
           vengono riusate (per nome), i task vengono sempre aggiunti.
@@ -500,41 +500,41 @@ export default function SettingsPage() {
         <div className="grid grid-cols-2 gap-2">
           <button
             onClick={handleExportTasks}
-            className="flex items-center justify-center gap-2 py-3 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest active:scale-[0.98] transition-all"
+            className="flex items-center justify-center gap-2 py-3 bg-ink text-white rounded-2xl font-black text-xs uppercase tracking-widest active:scale-[0.98] transition-all"
           >
             <Download size={14} />
             Esporta
           </button>
-          <label className="flex items-center justify-center gap-2 py-3 bg-slate-100 text-slate-700 rounded-2xl font-black text-xs uppercase tracking-widest active:scale-[0.98] transition-all cursor-pointer">
+          <label className="flex items-center justify-center gap-2 py-3 bg-background-sunken text-ink2 rounded-2xl font-black text-xs uppercase tracking-widest active:scale-[0.98] transition-all cursor-pointer">
             <Upload size={14} />
             {importing ? '...' : 'Importa'}
             <input type="file" accept="application/json" onChange={handleImportTasks} disabled={importing} className="hidden" />
           </label>
         </div>
         {importResult && (
-          <div className="bg-cyan-50 p-3 rounded-xl text-center">
-            <p className="text-xs font-bold text-cyan-800">{importResult}</p>
+          <div className="bg-primary-soft p-3 rounded-xl text-center">
+            <p className="text-xs font-bold text-primary-ink">{importResult}</p>
           </div>
         )}
       </section>
 
       {/* Test Mode Section */}
-      <section className="bg-slate-50 p-6 rounded-[2.5rem] border border-slate-200 space-y-5">
+      <section className="bg-background-sunken p-6 rounded-[2.5rem] border border-hairline space-y-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-3 rounded-2xl bg-amber-100 text-amber-600">
+            <div className="p-3 rounded-2xl bg-soon-soft text-soon-ink">
               <FlaskConical className="w-5 h-5" />
             </div>
             <div>
-              <p className="font-bold text-slate-800 tracking-tight">Modalità Test</p>
-              <p className="text-[10px] text-slate-400 font-bold uppercase">Sviluppo & Debug</p>
+              <p className="font-bold text-ink tracking-tight">Modalità Test</p>
+              <p className="text-[10px] text-ink3 font-bold uppercase">Sviluppo & Debug</p>
             </div>
           </div>
           <input 
             type="checkbox" 
             checked={testMode} 
             onChange={handleToggleTestMode}
-            className="w-6 h-6 accent-amber-500"
+            className="w-6 h-6 accent-soon"
           />
         </div>
 
@@ -543,26 +543,26 @@ export default function SettingsPage() {
             <button
               onClick={handleGenerateTestData}
               disabled={generating}
-              className="w-full flex items-center justify-between p-4 bg-white border border-amber-200 rounded-2xl shadow-sm active:scale-[0.98] transition-all group"
+              className="w-full flex items-center justify-between p-4 bg-white border border-soon-soft rounded-2xl shadow-sm active:scale-[0.98] transition-all group"
             >
               <div className="text-left">
-                <p className="font-bold text-slate-800 text-sm">Genera dati finti</p>
-                <p className="text-[10px] text-slate-400 font-medium italic">Simula 14 giorni di attività</p>
+                <p className="font-bold text-ink text-sm">Genera dati finti</p>
+                <p className="text-[10px] text-ink3 font-medium italic">Simula 14 giorni di attività</p>
               </div>
-              <ChevronRight className="text-amber-300 group-hover:text-amber-500 transition-colors" />
+              <ChevronRight className="text-soon group-hover:text-soon transition-colors" />
             </button>
 
             <button
               onClick={handleReset}
               disabled={resetting}
-              className="w-full p-4 bg-red-50 text-red-600 rounded-2xl font-bold text-xs uppercase tracking-widest border border-red-100 active:bg-red-100 transition-colors"
+              className="w-full p-4 bg-urgent-soft text-urgent-ink rounded-2xl font-bold text-xs uppercase tracking-widest border border-urgent-soft active:bg-urgent-soft transition-colors"
             >
               {resetting ? 'Reset in corso...' : 'Reset Totale'}
             </button>
 
             {generateResult && (
-              <div className="bg-amber-100 p-3 rounded-xl text-center">
-                <p className="text-xs font-bold text-amber-800">{generateResult}</p>
+              <div className="bg-soon-soft p-3 rounded-xl text-center">
+                <p className="text-xs font-bold text-soon-ink">{generateResult}</p>
               </div>
             )}
           </div>
@@ -570,7 +570,7 @@ export default function SettingsPage() {
       </section>
 
       <div className="text-center pt-8">
-        <p className="text-[10px] text-slate-300 font-bold uppercase tracking-widest leading-loose">
+        <p className="text-[10px] text-ink3 font-bold uppercase tracking-widest leading-loose">
           Broom Ecosystem<br/>
           <span className="opacity-50">v{pkg.version}</span>
         </p>
@@ -593,16 +593,16 @@ function RenameModal({ user, onSave, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
       <div className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-xl space-y-4">
-        <h2 className="text-xl font-black text-slate-900">Rinomina Utente</h2>
+        <h2 className="text-xl font-black text-ink">Rinomina Utente</h2>
         <input 
           type="text" 
           value={name} 
           onChange={e => setName(e.target.value)}
-          className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+          className="w-full border border-hairline rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
           autoFocus
         />
         <div className="flex gap-3">
-          <button onClick={onClose} className="flex-1 py-3 bg-slate-100 text-slate-700 font-bold rounded-2xl">
+          <button onClick={onClose} className="flex-1 py-3 bg-background-sunken text-ink2 font-bold rounded-2xl">
             Annulla
           </button>
           <button onClick={() => onSave(name)} className="flex-1 py-3 bg-primary text-white font-bold rounded-2xl">

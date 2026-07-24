@@ -17,22 +17,22 @@ export default function PageHeader({ title, subtitle, backTo }) {
       {backTo ? (
         <button
           onClick={() => navigate(backTo)}
-          className="p-2 bg-white rounded-xl shadow-sm border border-slate-100 flex-shrink-0"
+          className="p-2 bg-white rounded-xl shadow-sm border border-hairline flex-shrink-0"
         >
-          <ArrowLeft className="w-5 h-5 text-slate-600" />
+          <ArrowLeft className="w-5 h-5 text-ink2" />
         </button>
       ) : <div className="w-10" />}
 
       <div className="flex-1 min-w-0">
-        <h1 className="text-2xl font-black truncate">{title}</h1>
-        {subtitle && <p className="text-sm text-slate-400">{subtitle}</p>}
+        <h1 className="text-2xl font-display font-semibold truncate">{title}</h1>
+        {subtitle && <p className="text-sm text-ink3">{subtitle}</p>}
       </div>
 
       <button
         onClick={openDrawer}
-        className="p-2 bg-white rounded-xl shadow-sm border border-slate-100 flex-shrink-0"
+        className="p-2 bg-white rounded-xl shadow-sm border border-hairline flex-shrink-0"
       >
-        <Menu className="w-5 h-5 text-slate-600" />
+        <Menu className="w-5 h-5 text-ink2" />
       </button>
     </header>
   );

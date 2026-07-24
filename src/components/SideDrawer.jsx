@@ -31,14 +31,14 @@ export default function SideDrawer() {
       {/* Panel */}
       <div className="relative bg-white w-72 h-full shadow-2xl flex flex-col animate-in slide-in-from-left duration-200">
         {/* Header drawer */}
-        <div className="flex items-center justify-between p-5 border-b border-slate-100">
+        <div className="flex items-center justify-between p-5 border-b border-hairline">
           <div>
-            <h2 className="font-black text-xl text-slate-900">Broom</h2>
-            <p className="text-xs text-slate-400">Gestione domestica</p>
+            <h2 className="font-display font-semibold text-xl text-ink">Broom</h2>
+            <p className="text-xs text-ink3">Gestione domestica</p>
           </div>
           <button
             onClick={closeDrawer}
-            className="p-1.5 bg-slate-100 rounded-xl text-slate-500"
+            className="p-1.5 bg-background-sunken rounded-xl text-ink2"
           >
             <X className="w-4 h-4" />
           </button>
@@ -55,7 +55,7 @@ export default function SideDrawer() {
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-colors text-left ${
                   active
                     ? 'bg-primary text-white'
-                    : 'text-slate-600 hover:bg-slate-50 active:bg-slate-100'
+                    : 'text-ink2 hover:bg-background-sunken active:bg-background-sunken'
                 }`}
               >
                 <Icon className={`w-5 h-5 flex-shrink-0 ${active ? 'stroke-[2.5]' : 'stroke-[1.5]'}`} />
@@ -65,8 +65,8 @@ export default function SideDrawer() {
           })}
         </nav>
 
-        <div className="p-4 border-t border-slate-50">
-          <p className="text-[10px] text-slate-300 font-bold uppercase tracking-tighter text-center">
+        <div className="p-4 border-t border-hairline">
+          <p className="text-[10px] text-ink3 font-bold uppercase tracking-tighter text-center">
             Broom v{pkg.version}
           </p>
         </div>

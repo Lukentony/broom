@@ -4,7 +4,7 @@
 
 @layer base {
   body {
-    @apply antialiased bg-background select-none touch-pan-y;
+    @apply antialiased bg-background text-ink font-sans select-none touch-pan-y;
     -webkit-tap-highlight-color: transparent;
   }
 }

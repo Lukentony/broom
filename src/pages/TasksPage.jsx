@@ -106,17 +106,17 @@ export default function TasksPage() {
     <div className="max-w-md mx-auto p-4 space-y-4 pb-24">
       <PageHeader title="Task" subtitle={`${tasks.length} task attivi`} />
 
-      <div className="flex bg-slate-100 p-1 rounded-xl">
+      <div className="flex bg-background-sunken p-1 rounded-xl">
         <TabBtn label="Urgenti" active={activeTab === 'urgent'} onClick={() => setActiveTab('urgent')} />
         <TabBtn label="Tutti" active={activeTab === 'all'} onClick={() => setActiveTab('all')} />
       </div>
 
-      {loading && <div className="text-center py-10 text-slate-400">Caricamento...</div>}
+      {loading && <div className="text-center py-10 text-ink3">Caricamento...</div>}
 
       {!loading && activeTab !== 'rooms' && (
         <div className="space-y-3">
           {filteredTasks.length === 0
-            ? <div className="text-center py-12 text-slate-400">Nessun task in questa vista.</div>
+            ? <div className="text-center py-12 text-ink3">Nessun task in questa vista.</div>
             : filteredTasks.map(task => (
               <TaskCard
                 key={task.id}
@@ -160,7 +160,7 @@ export default function TasksPage() {
       )}
 
       {undoToast && (
-        <div className="fixed bottom-40 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-slate-800 text-white px-4 py-3 rounded-2xl shadow-xl text-sm font-medium">
+        <div className="fixed bottom-40 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-ink text-white px-4 py-3 rounded-2xl shadow-xl text-sm font-medium">
           <span className="truncate max-w-[160px]">✓ {undoToast.taskName}</span>
           <button onClick={handleUndo} className="text-primary font-bold whitespace-nowrap">Annulla</button>
         </div>
@@ -238,7 +238,7 @@ function TaskForm({ task, rooms, users, onSave, onDelete, onSnooze, onClose }) {
       <div className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-xl max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-5">
           <h2 className="text-xl font-black">{task ? 'Modifica Task' : 'Nuovo Task'}</h2>
-          <button onClick={onClose} className="p-2 bg-slate-100 rounded-full">
+          <button onClick={onClose} className="p-2 bg-background-sunken rounded-full">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -246,19 +246,19 @@ function TaskForm({ task, rooms, users, onSave, onDelete, onSnooze, onClose }) {
         <div className="space-y-4">
           {/* Nome */}
           <div>
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 block">Nome</label>
+            <label className="text-xs font-bold text-ink2 uppercase tracking-wider mb-1.5 block">Nome</label>
             <input
               type="text"
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="Es. Lavare i piatti"
-              className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+              className="w-full border border-hairline rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
             />
           </div>
 
           {/* Stanze (una o più) */}
           <div>
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 block">Stanze</label>
+            <label className="text-xs font-bold text-ink2 uppercase tracking-wider mb-1.5 block">Stanze</label>
             <div className="flex gap-2 flex-wrap">
               {rooms.map(r => (
                 <button
@@ -267,7 +267,7 @@ function TaskForm({ task, rooms, users, onSave, onDelete, onSnooze, onClose }) {
                   onClick={() => toggleRoom(r.id)}
                   className={clsx(
                     'px-3 py-1.5 rounded-xl text-xs font-bold transition-colors',
-                    roomIds.includes(r.id) ? 'bg-primary text-white' : 'bg-slate-100 text-slate-600'
+                    roomIds.includes(r.id) ? 'bg-primary text-white' : 'bg-background-sunken text-ink2'
                   )}
                 >
                   {r.name}
@@ -275,13 +275,13 @@ function TaskForm({ task, rooms, users, onSave, onDelete, onSnooze, onClose }) {
               ))}
             </div>
             {roomIds.length === 0 && (
-              <p className="text-xs text-red-500 mt-1.5">Scegli almeno una stanza</p>
+              <p className="text-xs text-urgent mt-1.5">Scegli almeno una stanza</p>
             )}
           </div>
 
           {/* Frequenza */}
           <div>
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 block">Ripeti</label>
+            <label className="text-xs font-bold text-ink2 uppercase tracking-wider mb-1.5 block">Ripeti</label>
             <div className="flex flex-wrap gap-2 mb-2">
               {FREQ_PRESETS.map(p => (
                 <button
@@ -291,7 +291,7 @@ function TaskForm({ task, rooms, users, onSave, onDelete, onSnooze, onClose }) {
                     'px-3 py-1.5 rounded-xl text-xs font-bold transition-colors',
                     freqDays === p.days && recurMode === 'preset'
                       ? 'bg-primary text-white'
-                      : 'bg-slate-100 text-slate-600'
+                      : 'bg-background-sunken text-ink2'
                   )}
                 >
                   {p.label}
@@ -301,7 +301,7 @@ function TaskForm({ task, rooms, users, onSave, onDelete, onSnooze, onClose }) {
                 onClick={() => setRecurMode('custom')}
                 className={clsx(
                   'px-3 py-1.5 rounded-xl text-xs font-bold transition-colors',
-                  recurMode === 'custom' ? 'bg-primary text-white' : 'bg-slate-100 text-slate-600'
+                  recurMode === 'custom' ? 'bg-primary text-white' : 'bg-background-sunken text-ink2'
                 )}
               >
                 Personalizzato
@@ -310,7 +310,7 @@ function TaskForm({ task, rooms, users, onSave, onDelete, onSnooze, onClose }) {
                 onClick={() => setRecurMode('weekdays')}
                 className={clsx(
                   'px-3 py-1.5 rounded-xl text-xs font-bold transition-colors',
-                  recurMode === 'weekdays' ? 'bg-primary text-white' : 'bg-slate-100 text-slate-600'
+                  recurMode === 'weekdays' ? 'bg-primary text-white' : 'bg-background-sunken text-ink2'
                 )}
               >
                 Giorni settimana
@@ -318,16 +318,16 @@ function TaskForm({ task, rooms, users, onSave, onDelete, onSnooze, onClose }) {
             </div>
             {recurMode === 'custom' && (
               <div className="flex items-center gap-2">
-                <span className="text-sm text-slate-500">Ogni</span>
+                <span className="text-sm text-ink2">Ogni</span>
                 <input
                   type="number"
                   min={1}
                   max={365}
                   value={freqDays}
                   onChange={e => setFreqDays(e.target.value)}
-                  className="w-20 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 text-center"
+                  className="w-20 border border-hairline rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 text-center"
                 />
-                <span className="text-sm text-slate-500">giorni</span>
+                <span className="text-sm text-ink2">giorni</span>
               </div>
             )}
             {recurMode === 'weekdays' && (
@@ -338,14 +338,14 @@ function TaskForm({ task, rooms, users, onSave, onDelete, onSnooze, onClose }) {
                     onClick={() => toggleDay(w.value)}
                     className={clsx(
                       'w-11 py-1.5 rounded-xl text-xs font-bold transition-colors',
-                      selectedDays.includes(w.value) ? 'bg-primary text-white' : 'bg-slate-100 text-slate-600'
+                      selectedDays.includes(w.value) ? 'bg-primary text-white' : 'bg-background-sunken text-ink2'
                     )}
                   >
                     {w.label}
                   </button>
                 ))}
                 {selectedDays.length === 0 && (
-                  <p className="text-xs text-red-500 mt-1.5 w-full">Scegli almeno un giorno</p>
+                  <p className="text-xs text-urgent mt-1.5 w-full">Scegli almeno un giorno</p>
                 )}
               </div>
             )}
@@ -353,27 +353,27 @@ function TaskForm({ task, rooms, users, onSave, onDelete, onSnooze, onClose }) {
 
           {/* Prossima scadenza (opzionale, sovrascrive il calcolo automatico) */}
           <div>
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 block">
-              Prossima scadenza {!task && <span className="normal-case font-medium text-slate-400">(opzionale)</span>}
+            <label className="text-xs font-bold text-ink2 uppercase tracking-wider mb-1.5 block">
+              Prossima scadenza {!task && <span className="normal-case font-medium text-ink3">(opzionale)</span>}
             </label>
             <input
               type="date"
               value={dueDateOverride}
               onChange={e => setDueDateOverride(e.target.value)}
-              className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+              className="w-full border border-hairline rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
             />
           </div>
 
           {/* Difficoltà */}
           <div>
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 block">
+            <label className="text-xs font-bold text-ink2 uppercase tracking-wider mb-1.5 block">
               Difficoltà
             </label>
             <div className="flex gap-1">
               {[1, 2, 3, 4, 5].map(n => (
                 <button key={n} onClick={() => setDifficulty(n)}>
                   <Star
-                    className={clsx('w-7 h-7 transition-colors', n <= difficulty ? 'text-amber-400 fill-amber-400' : 'text-slate-200')}
+                    className={clsx('w-7 h-7 transition-colors', n <= difficulty ? 'text-soon fill-soon' : 'text-ink3')}
                   />
                 </button>
               ))}
@@ -382,7 +382,7 @@ function TaskForm({ task, rooms, users, onSave, onDelete, onSnooze, onClose }) {
 
           {/* Assegnazione */}
           <div>
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 block">Assegnazione</label>
+            <label className="text-xs font-bold text-ink2 uppercase tracking-wider mb-1.5 block">Assegnazione</label>
             <div className="flex gap-2 flex-wrap">
               {assignmentOptions.map(o => (
                 <button
@@ -390,7 +390,7 @@ function TaskForm({ task, rooms, users, onSave, onDelete, onSnooze, onClose }) {
                   onClick={() => setAssignment(o.value)}
                   className={clsx(
                     'px-3 py-2 rounded-xl text-xs font-bold transition-colors',
-                    assignment === o.value ? 'bg-primary text-white' : 'bg-slate-100 text-slate-600'
+                    assignment === o.value ? 'bg-primary text-white' : 'bg-background-sunken text-ink2'
                   )}
                 >
                   {o.label}
@@ -401,13 +401,13 @@ function TaskForm({ task, rooms, users, onSave, onDelete, onSnooze, onClose }) {
 
           {/* Tag */}
           <div>
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 block">Tag (opzionale)</label>
+            <label className="text-xs font-bold text-ink2 uppercase tracking-wider mb-1.5 block">Tag (opzionale)</label>
             <input
               type="text"
               value={tags}
               onChange={e => setTags(e.target.value)}
               placeholder="Es. cucina, pulizie, settimanale"
-              className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+              className="w-full border border-hairline rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
             />
           </div>
         </div>
@@ -423,7 +423,7 @@ function TaskForm({ task, rooms, users, onSave, onDelete, onSnooze, onClose }) {
           {onSnooze && (
             <button
               onClick={onSnooze}
-              className="w-full py-3 text-slate-600 bg-slate-100 font-bold text-sm rounded-2xl active:bg-slate-200 transition-colors"
+              className="w-full py-3 text-ink2 bg-background-sunken font-bold text-sm rounded-2xl active:bg-background-sunken transition-colors"
             >
               Rinvia di 1 giorno
             </button>
@@ -431,7 +431,7 @@ function TaskForm({ task, rooms, users, onSave, onDelete, onSnooze, onClose }) {
           {onDelete && (
             <button
               onClick={onDelete}
-              className="w-full py-3 text-red-500 font-bold text-sm rounded-2xl active:bg-red-50 transition-colors"
+              className="w-full py-3 text-urgent font-bold text-sm rounded-2xl active:bg-urgent-soft transition-colors"
             >
               Elimina task
             </button>
@@ -446,12 +446,12 @@ function ConfirmDialog({ message, onConfirm, onCancel }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
       <div className="bg-white w-full max-w-sm rounded-3xl p-6 space-y-4">
-        <p className="font-bold text-slate-800 text-center">{message}</p>
+        <p className="font-bold text-ink text-center">{message}</p>
         <div className="flex gap-3">
-          <button onClick={onCancel} className="flex-1 py-3 bg-slate-100 text-slate-700 font-bold rounded-2xl">
+          <button onClick={onCancel} className="flex-1 py-3 bg-background-sunken text-ink2 font-bold rounded-2xl">
             Annulla
           </button>
-          <button onClick={onConfirm} className="flex-1 py-3 bg-red-500 text-white font-bold rounded-2xl">
+          <button onClick={onConfirm} className="flex-1 py-3 bg-urgent text-white font-bold rounded-2xl">
             Elimina
           </button>
         </div>
@@ -465,7 +465,7 @@ function TabBtn({ label, active, onClick }) {
     <button
       onClick={onClick}
       className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${
-        active ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'
+        active ? 'bg-white shadow-sm text-ink' : 'text-ink2'
       }`}
     >
       {label}

@@ -58,7 +58,7 @@ export default function StoricaPage() {
         <PageHeader title="Storico" subtitle="Ultimi 30 giorni" />
         <button 
           onClick={exportCSV} 
-          className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition-colors"      
+          className="p-2 bg-background-sunken hover:bg-background-sunken text-ink2 rounded-xl transition-colors"      
           title="Esporta CSV"
         >
           <Download className="w-5 h-5" />
@@ -70,7 +70,7 @@ export default function StoricaPage() {
           <button
             onClick={() => setFilterUser('tutti')}
             className={`px-4 py-1.5 rounded-full text-sm font-bold transition-all whitespace-nowrap ${     
-              filterUser === 'tutti' ? 'bg-slate-800 text-white shadow-md shadow-slate-200' : 'bg-white border border-slate-100 text-slate-500 hover:bg-slate-50'
+              filterUser === 'tutti' ? 'bg-ink text-white shadow-md shadow-hairline' : 'bg-white border border-hairline text-ink2 hover:bg-background-sunken'
             }`}
           >
             Tutti
@@ -80,7 +80,7 @@ export default function StoricaPage() {
               key={user}
               onClick={() => setFilterUser(user)}
               className={`px-4 py-1.5 rounded-full text-sm font-bold transition-all whitespace-nowrap ${   
-                filterUser === user ? 'bg-primary text-white shadow-md shadow-primary/20' : 'bg-white border border-slate-100 text-slate-500 hover:bg-slate-50'
+                filterUser === user ? 'bg-primary text-white shadow-md shadow-primary/20' : 'bg-white border border-hairline text-ink2 hover:bg-background-sunken'
               }`}
             >
               {user}
@@ -89,35 +89,35 @@ export default function StoricaPage() {
         </div>
       )}
 
-      {loading && <div className="text-center py-10 text-slate-400">Caricamento...</div>}
+      {loading && <div className="text-center py-10 text-ink3">Caricamento...</div>}
 
       {!loading && history.length === 0 && (
-        <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-200">
-          <p className="text-slate-400 font-medium">Nessun completamento trovato.</p>
+        <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-hairline">
+          <p className="text-ink3 font-medium">Nessun completamento trovato.</p>
         </div>
       )}
 
       {!loading && history.length > 0 && (
-        <div className="bg-white rounded-3xl border border-slate-100 overflow-hidden shadow-sm">
+        <div className="bg-white rounded-3xl border border-hairline overflow-hidden shadow-sm">
           {filteredHistory.map((item, idx) => (
             <div
               key={item.id}
-              className={`p-4 flex items-center gap-3 ${idx !== filteredHistory.length - 1 ? 'border-b border-slate-50' : ''}`}
+              className={`p-4 flex items-center gap-3 ${idx !== filteredHistory.length - 1 ? 'border-b border-hairline' : ''}`}
             >
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm flex-shrink-0 ${
-                item.points_awarded > 0 ? 'bg-primary/10 text-primary' : 'bg-slate-50 text-slate-400'      
+                item.points_awarded > 0 ? 'bg-primary/10 text-primary' : 'bg-background-sunken text-ink3'      
               }`}>
                 {item.points_awarded}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-bold text-slate-800 text-sm truncate">{item.task_name}</p>
-                <p className="text-[10px] text-slate-400 font-medium">
+                <p className="font-bold text-ink text-sm truncate">{item.task_name}</p>
+                <p className="text-[10px] text-ink3 font-medium">
                   {item.user_name} · {format(parseISO(item.completed_at), "d MMM, HH:mm", { locale: it })}
                 </p>
               </div>
               <button
                 onClick={() => handleDelete(item.id)}
-                className="p-2 text-slate-300 hover:text-red-400 transition-colors"
+                className="p-2 text-ink3 hover:text-urgent transition-colors"
                 title="Elimina completamento"
               >
                 <Trash2 className="w-4 h-4" />
@@ -125,7 +125,7 @@ export default function StoricaPage() {
             </div>
           ))}
           {filteredHistory.length === 0 && (
-            <div className="text-center py-8 text-slate-400 text-sm">
+            <div className="text-center py-8 text-ink3 text-sm">
               Nessuna attività per questo filtro.
             </div>
           )}

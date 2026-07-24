@@ -53,7 +53,7 @@ export default function RoomsPage() {
     <div className="max-w-md mx-auto p-4 space-y-4 pb-24">
       <PageHeader title="Stanze" subtitle={`${rooms.length} stanze attive`} />
 
-      {loading && <div className="text-center py-10 text-slate-400">Caricamento...</div>}
+      {loading && <div className="text-center py-10 text-ink3">Caricamento...</div>}
 
       {!loading && (
         <div className="space-y-3">
@@ -62,15 +62,15 @@ export default function RoomsPage() {
             return (
               <div
                 key={room.id}
-                className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 flex items-center gap-4"
+                className="bg-white rounded-2xl shadow-sm border border-hairline p-4 flex items-center gap-4"
               >
-                <div className="p-3 bg-slate-50 rounded-xl text-slate-500 flex-shrink-0">
+                <div className="p-3 bg-background-sunken rounded-xl text-ink2 flex-shrink-0">
                   <IconComp className="w-6 h-6" />
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-bold text-slate-800">{room.name}</h3>
-                  <p className="text-xs text-slate-400">
+                  <h3 className="font-bold text-ink">{room.name}</h3>
+                  <p className="text-xs text-ink3">
                     {room.task_count === 1 ? '1 task' : `${room.task_count} task`}
                   </p>
                 </div>
@@ -78,13 +78,13 @@ export default function RoomsPage() {
                 <div className="flex flex-col gap-1.5 flex-shrink-0">
                   <button
                     onClick={() => setRoomForm(room)}
-                    className="p-1.5 bg-slate-50 rounded-lg text-slate-400 hover:text-primary transition-colors"
+                    className="p-1.5 bg-background-sunken rounded-lg text-ink3 hover:text-primary transition-colors"
                   >
                     <Pencil className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => setConfirmDelete(room.id)}
-                    className="p-1.5 bg-slate-50 rounded-lg text-slate-400 hover:text-red-500 transition-colors"
+                    className="p-1.5 bg-background-sunken rounded-lg text-ink3 hover:text-urgent transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -94,7 +94,7 @@ export default function RoomsPage() {
           })}
 
           {rooms.length === 0 && (
-            <div className="text-center py-12 text-slate-400">
+            <div className="text-center py-12 text-ink3">
               Nessuna stanza. Aggiungine una!
             </div>
           )}
@@ -145,26 +145,26 @@ function RoomFormModal({ room, onSave, onClose }) {
       <div className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-xl">
         <div className="flex justify-between items-center mb-5">
           <h2 className="text-xl font-black">{room ? 'Modifica Stanza' : 'Nuova Stanza'}</h2>
-          <button onClick={onClose} className="p-2 bg-slate-100 rounded-full">
+          <button onClick={onClose} className="p-2 bg-background-sunken rounded-full">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <div className="space-y-4">
           <div>
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 block">Nome</label>
+            <label className="text-xs font-bold text-ink2 uppercase tracking-wider mb-1.5 block">Nome</label>
             <input
               type="text"
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="Es. Cucina"
               autoFocus
-              className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+              className="w-full border border-hairline rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
             />
           </div>
 
           <div>
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 block">Icona</label>
+            <label className="text-xs font-bold text-ink2 uppercase tracking-wider mb-1.5 block">Icona</label>
             <div className="flex gap-2 flex-wrap">
               {ROOM_ICONS.map(({ name: iconName, icon: IconComp }) => (
                 <button
@@ -172,7 +172,7 @@ function RoomFormModal({ room, onSave, onClose }) {
                   onClick={() => setIcon(iconName)}
                   className={clsx(
                     'p-3 rounded-xl transition-colors',
-                    icon === iconName ? 'bg-primary text-white' : 'bg-slate-100 text-slate-500'
+                    icon === iconName ? 'bg-primary text-white' : 'bg-background-sunken text-ink2'
                   )}
                 >
                   <IconComp className="w-5 h-5" />
@@ -198,12 +198,12 @@ function ConfirmDialog({ message, onConfirm, onCancel }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
       <div className="bg-white w-full max-w-sm rounded-3xl p-6 space-y-4">
-        <p className="font-bold text-slate-800 text-center">{message}</p>
+        <p className="font-bold text-ink text-center">{message}</p>
         <div className="flex gap-3">
-          <button onClick={onCancel} className="flex-1 py-3 bg-slate-100 text-slate-700 font-bold rounded-2xl">
+          <button onClick={onCancel} className="flex-1 py-3 bg-background-sunken text-ink2 font-bold rounded-2xl">
             Annulla
           </button>
-          <button onClick={onConfirm} className="flex-1 py-3 bg-red-500 text-white font-bold rounded-2xl">
+          <button onClick={onConfirm} className="flex-1 py-3 bg-urgent text-white font-bold rounded-2xl">
             Elimina
           </button>
         </div>

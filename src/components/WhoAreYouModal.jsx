@@ -45,8 +45,8 @@ export default function WhoAreYouModal({ onSelect }) {
   };
 
   const colors = [
-    { bg: 'bg-blue-50', border: 'border-blue-100', text: 'text-primary', activeBg: 'bg-primary', activeBorder: 'border-primary' },
-    { bg: 'bg-emerald-50', border: 'border-emerald-100', text: 'text-emerald-600', activeBg: 'bg-emerald-500', activeBorder: 'border-emerald-500' },
+    { bg: 'bg-primary-soft', border: 'border-primary-soft', text: 'text-primary', activeBg: 'bg-primary', activeBorder: 'border-primary' },
+    { bg: 'bg-sage-soft', border: 'border-sage-soft', text: 'text-sage-ink', activeBg: 'bg-sage', activeBorder: 'border-sage' },
   ];
 
   // Prima del primo check store.getStats(), non mostrare nulla per evitare
@@ -55,7 +55,7 @@ export default function WhoAreYouModal({ onSelect }) {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-md" />
+      <div className="absolute inset-0 bg-ink/80 backdrop-blur-md" />
 
       <div className="relative bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl animate-in zoom-in-95 duration-300">
         {users.length === 0 ? (
@@ -64,8 +64,8 @@ export default function WhoAreYouModal({ onSelect }) {
               <div className="w-16 h-16 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <Sparkles size={32} strokeWidth={2.5} />
               </div>
-              <h2 className="text-3xl font-black text-slate-900 tracking-tight">Benvenuto in Broom!</h2>
-              <p className="text-slate-500 font-medium">Inserisci il tuo nome per iniziare</p>
+              <h2 className="text-3xl font-display font-semibold text-ink tracking-tight">Benvenuto in Broom!</h2>
+              <p className="text-ink2 font-medium">Inserisci il tuo nome per iniziare</p>
             </div>
 
             <form onSubmit={handleCreate} className="space-y-4">
@@ -76,11 +76,11 @@ export default function WhoAreYouModal({ onSelect }) {
                 placeholder="Il tuo nome"
                 autoFocus
                 disabled={creating}
-                className="w-full border-2 border-slate-200 rounded-2xl px-4 py-4 text-base font-semibold focus:outline-none focus:ring-4 focus:ring-primary/20 focus:border-primary transition-all disabled:opacity-50"
+                className="w-full border-2 border-hairline rounded-2xl px-4 py-4 text-base font-semibold focus:outline-none focus:ring-4 focus:ring-primary/20 focus:border-primary transition-all disabled:opacity-50"
               />
 
               {error && (
-                <p className="text-sm text-red-500 font-medium bg-red-50 p-3 rounded-xl">{error}</p>
+                <p className="text-sm text-urgent font-medium bg-urgent-soft p-3 rounded-xl">{error}</p>
               )}
 
               <button
@@ -105,8 +105,8 @@ export default function WhoAreYouModal({ onSelect }) {
               <div className="w-16 h-16 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <User size={32} strokeWidth={2.5} />
               </div>
-              <h2 className="text-3xl font-black text-slate-900 tracking-tight">Chi sei?</h2>
-              <p className="text-slate-500 font-medium">Scegli il tuo profilo per iniziare</p>
+              <h2 className="text-3xl font-display font-semibold text-ink tracking-tight">Chi sei?</h2>
+              <p className="text-ink2 font-medium">Scegli il tuo profilo per iniziare</p>
             </div>
 
             <div className="grid gap-4">
@@ -135,7 +135,7 @@ export default function WhoAreYouModal({ onSelect }) {
           </>
         )}
 
-        <p className="mt-8 text-center text-[10px] text-slate-400 font-bold uppercase tracking-tighter">
+        <p className="mt-8 text-center text-[10px] text-ink3 font-bold uppercase tracking-tighter">
           Broom Device Identity
         </p>
       </div>

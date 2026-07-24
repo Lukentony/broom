@@ -13,11 +13,11 @@ const MONTHS = [
 const DAYS = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
 
 function getDayColor(dueDate) {
-  if (isPast(dueDate) && !isToday(dueDate)) return 'bg-purple-400';
-  if (isToday(dueDate) || isTomorrow(dueDate)) return 'bg-red-400';
+  if (isPast(dueDate) && !isToday(dueDate)) return 'bg-overdue';
+  if (isToday(dueDate) || isTomorrow(dueDate)) return 'bg-urgent';
   const diff = Math.ceil((dueDate - new Date()) / 86400000);
-  if (diff <= 3) return 'bg-yellow-400';
-  return 'bg-green-400';
+  if (diff <= 3) return 'bg-soon';
+  return 'bg-sage';
 }
 
 export default function CalendarPage() {
@@ -73,28 +73,28 @@ export default function CalendarPage() {
       <PageHeader title="Calendario" subtitle="Prossime scadenze" />
 
       {/* Navigazione mese */}
-      <div className="flex items-center justify-between bg-white rounded-2xl px-4 py-3 shadow-sm border border-slate-100">
+      <div className="flex items-center justify-between bg-white rounded-2xl px-4 py-3 shadow-sm border border-hairline">
         <button
           onClick={() => setViewDate(new Date(year, month - 1, 1))}
-          className="p-1.5 bg-slate-100 rounded-xl active:scale-95 transition-transform"
+          className="p-1.5 bg-background-sunken rounded-xl active:scale-95 transition-transform"
         >
-          <ChevronLeft className="w-5 h-5 text-slate-600" />
+          <ChevronLeft className="w-5 h-5 text-ink2" />
         </button>
-        <h2 className="font-black text-slate-800">{MONTHS[month]} {year}</h2>
+        <h2 className="font-black text-ink">{MONTHS[month]} {year}</h2>
         <button
           onClick={() => setViewDate(new Date(year, month + 1, 1))}
-          className="p-1.5 bg-slate-100 rounded-xl active:scale-95 transition-transform"
+          className="p-1.5 bg-background-sunken rounded-xl active:scale-95 transition-transform"
         >
-          <ChevronRight className="w-5 h-5 text-slate-600" />
+          <ChevronRight className="w-5 h-5 text-ink2" />
         </button>
       </div>
 
       {/* Griglia */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
+      <div className="bg-white rounded-2xl shadow-sm border border-hairline p-4">
         {/* Header giorni */}
         <div className="grid grid-cols-7 mb-2">
           {DAYS.map(d => (
-            <div key={d} className="text-center text-[10px] font-bold text-slate-400 uppercase py-1">
+            <div key={d} className="text-center text-[10px] font-bold text-ink3 uppercase py-1">
               {d}
             </div>
           ))}
@@ -117,12 +117,12 @@ export default function CalendarPage() {
                   'relative flex flex-col items-center py-1.5 rounded-xl transition-colors',
                   isCurrentDay && 'bg-primary/10',
                   isSelected && 'bg-primary text-white ring-2 ring-primary',
-                  !isCurrentDay && !isSelected && 'hover:bg-slate-50'
+                  !isCurrentDay && !isSelected && 'hover:bg-background-sunken'
                 )}
               >
                 <span className={clsx(
                   'text-sm font-bold',
-                  isSelected ? 'text-white' : isCurrentDay ? 'text-primary' : 'text-slate-700'
+                  isSelected ? 'text-white' : isCurrentDay ? 'text-primary' : 'text-ink2'
                 )}>
                   {day.getDate()}
                 </span>
@@ -145,39 +145,39 @@ export default function CalendarPage() {
       {/* Legenda */}
       <div className="flex gap-3 flex-wrap px-1">
         {[
-          { color: 'bg-green-400', label: '>3 giorni' },
-          { color: 'bg-yellow-400', label: '1-3 giorni' },
-          { color: 'bg-red-400', label: 'Oggi/domani' },
-          { color: 'bg-purple-400', label: 'Scaduto' },
+          { color: 'bg-sage', label: '>3 giorni' },
+          { color: 'bg-soon', label: '1-3 giorni' },
+          { color: 'bg-urgent', label: 'Oggi/domani' },
+          { color: 'bg-overdue', label: 'Scaduto' },
         ].map(({ color, label }) => (
           <div key={label} className="flex items-center gap-1.5">
             <div className={clsx('w-2.5 h-2.5 rounded-full', color)} />
-            <span className="text-[10px] text-slate-400 font-medium">{label}</span>
+            <span className="text-[10px] text-ink3 font-medium">{label}</span>
           </div>
         ))}
       </div>
 
       {/* Task del giorno selezionato */}
       {selectedDay && (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 space-y-3">
+        <div className="bg-white rounded-2xl shadow-sm border border-hairline p-4 space-y-3">
           <div className="flex justify-between items-center">
-            <h3 className="font-black text-slate-800">
+            <h3 className="font-black text-ink">
               {selectedDay.getDate()} {MONTHS[selectedDay.getMonth()]}
             </h3>
-            <button onClick={() => setSelectedDay(null)} className="p-1 bg-slate-100 rounded-lg">
-              <X className="w-4 h-4 text-slate-500" />
+            <button onClick={() => setSelectedDay(null)} className="p-1 bg-background-sunken rounded-lg">
+              <X className="w-4 h-4 text-ink2" />
             </button>
           </div>
 
           {selectedOccurrences.length === 0
-            ? <p className="text-sm text-slate-400 text-center py-4">Nessun task in scadenza.</p>
+            ? <p className="text-sm text-ink3 text-center py-4">Nessun task in scadenza.</p>
             : selectedOccurrences.map(({ task, date }, idx) => (
-              <div key={`${task.id}_${idx}`} className="flex items-center gap-3 py-2 border-b border-slate-50 last:border-0">
+              <div key={`${task.id}_${idx}`} className="flex items-center gap-3 py-2 border-b border-hairline last:border-0">
                 <div className={clsx('w-2 h-8 rounded-full flex-shrink-0', getDayColor(parseISO(date)))} />
                 <div className="flex-1 min-w-0">
-                  <p className="font-bold text-slate-800 truncate text-sm">{task.name}</p>
+                  <p className="font-bold text-ink truncate text-sm">{task.name}</p>
                   {(task.room_ids || []).map(id => roomMap[id]).filter(Boolean).length > 0 && (
-                    <p className="text-xs text-slate-400">
+                    <p className="text-xs text-ink3">
                       {(task.room_ids || []).map(id => roomMap[id]).filter(Boolean).join(', ')}
                     </p>
                   )}

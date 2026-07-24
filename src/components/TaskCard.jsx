@@ -13,23 +13,23 @@ function getUrgency(dueDate) {
 
 const URGENCY = {
   overdue: {
-    card: 'border-purple-200 bg-purple-50/40 border-l-purple-500',
-    badge: 'bg-purple-100 text-purple-700',
+    card: 'border-overdue-soft bg-overdue-soft/40 border-l-overdue',
+    badge: 'bg-overdue-soft text-overdue-ink',
     label: 'Scaduto',
   },
   urgent: {
-    card: 'border-red-200 bg-red-50/30 border-l-red-500',
-    badge: 'bg-red-100 text-red-700',
+    card: 'border-urgent-soft bg-urgent-soft/30 border-l-urgent',
+    badge: 'bg-urgent-soft text-urgent-ink',
     label: 'Urgente',
   },
   soon: {
-    card: 'border-yellow-200 bg-yellow-50/30 border-l-yellow-500',
-    badge: 'bg-yellow-100 text-yellow-700',
+    card: 'border-soon-soft bg-soon-soft/30 border-l-soon',
+    badge: 'bg-soon-soft text-soon-ink',
     label: 'In scadenza',
   },
   ok: {
-    card: 'border-green-100 border-l-green-400',
-    badge: 'bg-green-100 text-green-700',
+    card: 'border-sage-soft border-l-sage',
+    badge: 'bg-sage-soft text-sage-ink',
     label: 'OK',
   },
 };
@@ -60,23 +60,23 @@ export default function TaskCard({ task, roomNames, performerName, onComplete, o
       onClick={onEdit}
     >
       <div className="p-4 space-y-1 flex-1 min-w-0">
-        <h3 className="font-bold text-slate-800 truncate">{task.name}</h3>
+        <h3 className="font-bold text-ink truncate">{task.name}</h3>
         <div className="flex items-center gap-2 flex-wrap">
           <span className={clsx('text-[10px] px-2 py-0.5 rounded-full font-bold uppercase', s.badge)}>
             {s.label}
           </span>
-          <span className="text-xs text-slate-400 flex items-center gap-1">
+          <span className="text-xs text-ink3 flex items-center gap-1">
             <Clock className="w-3 h-3" />
             {daysLabel(dueDate)}
           </span>
           {roomLabel && (
-            <span className="text-xs text-slate-300">· {roomLabel}</span>
+            <span className="text-xs text-ink3">· {roomLabel}</span>
           )}
-          <span className="text-xs text-slate-300">
+          <span className="text-xs text-ink3">
             · {recurrenceLabel(task)} · {task.assignment_type === 'TOGETHER' ? 'Insieme' : task.assignment_type === 'FIXED_A' ? 'Fisso A' : task.assignment_type === 'FIXED_B' ? 'Fisso B' : task.assignment_type === 'ALTERNATING' ? 'Alternato' : 'Chiunque'}
           </span>
           {performerName && (
-            <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase bg-indigo-100 text-indigo-700">
+            <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase bg-primary-soft text-primary-ink">
               Tocca a {performerName}
             </span>
           )}
@@ -85,7 +85,7 @@ export default function TaskCard({ task, roomNames, performerName, onComplete, o
 
       <button
         onClick={(e) => { e.stopPropagation(); onComplete(); }}
-        className="p-4 text-slate-300 hover:text-primary active:scale-95 transition-all"
+        className="p-4 text-ink3 hover:text-primary active:scale-95 transition-all"
       >
         <CheckCircle2 className="w-7 h-7" />
       </button>

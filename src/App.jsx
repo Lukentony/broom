@@ -75,7 +75,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <DrawerProvider>
-        <div className="min-h-screen bg-background text-slate-900">
+        <div className="min-h-screen bg-background text-ink">
           {!isOnline && <OfflineBanner />}
           {showUpdate && <UpdateBanner onUpdate={() => window.location.reload()} />}
           

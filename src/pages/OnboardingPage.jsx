@@ -25,20 +25,20 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-6 text-center bg-gradient-to-br from-primary/5 to-blue-50">
+    <div className="flex flex-col items-center justify-center min-h-screen p-6 text-center bg-gradient-to-br from-primary/5 to-primary-soft">
       <div className="w-full max-w-sm space-y-6">
         <div className="w-20 h-20 bg-primary text-white rounded-3xl flex items-center justify-center mx-auto shadow-lg shadow-primary/30">
           <Sparkles size={40} strokeWidth={1.5} />
         </div>
 
         <div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight">Benvenuto in Broom!</h1>
-          <p className="text-slate-500 font-medium mt-2">Inserisci il tuo nome per iniziare</p>
+          <h1 className="text-3xl font-display font-semibold text-ink tracking-tight">Benvenuto in Broom!</h1>
+          <p className="text-ink2 font-medium mt-2">Inserisci il tuo nome per iniziare</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="relative">
-            <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+            <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-ink3" />
             <input
               type="text"
               value={name}
@@ -46,12 +46,12 @@ export default function OnboardingPage() {
               placeholder="Il tuo nome"
               autoFocus
               disabled={saving}
-              className="w-full border-2 border-slate-200 rounded-2xl pl-12 pr-4 py-4 text-base font-semibold focus:outline-none focus:ring-4 focus:ring-primary/20 focus:border-primary transition-all disabled:opacity-50"
+              className="w-full border-2 border-hairline rounded-2xl pl-12 pr-4 py-4 text-base font-semibold focus:outline-none focus:ring-4 focus:ring-primary/20 focus:border-primary transition-all disabled:opacity-50"
             />
           </div>
 
           {error && (
-            <p className="text-sm text-red-500 font-medium bg-red-50 p-3 rounded-xl">{error}</p>
+            <p className="text-sm text-urgent font-medium bg-urgent-soft p-3 rounded-xl">{error}</p>
           )}
 
           <button
@@ -70,7 +70,7 @@ export default function OnboardingPage() {
           </button>
         </form>
 
-        <p className="text-[10px] text-slate-300 font-bold uppercase tracking-widest pt-4">
+        <p className="text-[10px] text-ink3 font-bold uppercase tracking-widest pt-4">
           Broom — Gestione Casa
         </p>
       </div>
