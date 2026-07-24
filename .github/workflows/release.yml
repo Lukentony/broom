@@ -25,8 +25,9 @@ jobs:
       - run: npx cap add android
       - run: npx cap sync android
       - run: cd android && ./gradlew assembleDebug
+      - run: mv android/app/build/outputs/apk/debug/app-debug.apk android/app/build/outputs/apk/debug/broom.apk
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: android/app/build/outputs/apk/debug/*.apk
+          files: android/app/build/outputs/apk/debug/broom.apk
           generate_release_notes: true
