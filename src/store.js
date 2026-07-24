@@ -41,6 +41,10 @@ function scheduleSave(doc) {
       localStorage.setItem(STORAGE_KEY, data);
       if (_nativeAdapter) {
         await _nativeAdapter.write(STORAGE_KEY, data);
+        // Copia anche su storage pubblico (Directory.Documents): a
+        // differenza del salvataggio sopra, sopravvive alla disinstallazione
+        // dell'app — vedi PIANO_BROOM_V1_10.md punto B.
+        await _nativeAdapter.writeBackup(serialized);
       }
     } catch (e) {
       console.error('Save failed:', e);
@@ -133,6 +137,7 @@ function getUserAB(d) {
   const active = getActiveUsers(d);
   return { userAId: active[0]?.id ?? null, userBId: active[1]?.id ?? null };
 }
+
 
 function isVacationMode() {
   try {
@@ -234,8 +239,8 @@ function checkOverduePenalties(d) {
 
       let targets = [];
       if (t.assignment_type === 'TOGETHER') targets = active.map(u => u.id);
-      else if (['FIXED_A', 'FIXED_B', 'ALTERNATING'].includes(t.assignment_type)) {
-        const assigned = determineNextPerformer(t.assignment_type, t.last_performer_id, userAId, userBId);
+      else if (['FIXED_A', 'FIXED_B', 'FIXED_USER', 'ALTERNATING'].includes(t.assignment_type)) {
+        const assigned = determineNextPerformer(t.assignment_type, t.last_performer_id, userAId, userBId, t.fixed_user_id);
         if (assigned != null) targets = [assigned];
       }
       // ANY: nessun responsabile singolo, nessuna penalità (come l'originale)
@@ -310,6 +315,7 @@ export const store = {
         recurrence_days: recurrenceDays,
         difficulty: data.difficulty,
         assignment_type: assignmentType,
+        fixed_user_id: data.fixed_user_id ?? null,
         grace_period_days: data.grace_period_days || 0,
         // Se non specificata esplicitamente, la prima scadenza rispetta la
         // ricorrenza scelta invece di essere sempre "oggi" (frequency_days=0
@@ -325,7 +331,7 @@ export const store = {
         is_quick_action: false,
         tags: data.tags || null,
         last_performer_id: null,
-        next_performer_id: determineNextPerformer(assignmentType, null, userAId, userBId),
+        next_performer_id: determineNextPerformer(assignmentType, null, userAId, userBId, data.fixed_user_id ?? null),
         penalized_delays: [],
         created_at: nowISO(),
       };
@@ -365,7 +371,21 @@ export const store = {
       }
 
       if (data.difficulty !== undefined) task.difficulty = data.difficulty;
+
+      const assignmentChanged = data.assignment_type !== undefined && data.assignment_type !== task.assignment_type;
+      const fixedUserChanged = data.fixed_user_id !== undefined && data.fixed_user_id !== task.fixed_user_id;
       if (data.assignment_type !== undefined) task.assignment_type = data.assignment_type;
+      if (data.fixed_user_id !== undefined) task.fixed_user_id = data.fixed_user_id;
+      if (assignmentChanged || fixedUserChanged) {
+        // Senza questo, cambiare l'assegnazione in modifica non si vedeva
+        // finché non arrivava il completamento successivo — sembrava non
+        // avesse fatto nulla.
+        const { userAId, userBId } = getUserAB(d);
+        task.next_performer_id = determineNextPerformer(
+          task.assignment_type, task.last_performer_id, userAId, userBId, task.fixed_user_id
+        );
+      }
+
       if (data.tags !== undefined) task.tags = data.tags;
       if (data.grace_period_days !== undefined) task.grace_period_days = data.grace_period_days;
     });
@@ -440,7 +460,7 @@ export const store = {
       // Aggiorna ultimo esecutore e calcola a chi tocca il prossimo giro
       t.last_performer_id = userId;
       const { userAId, userBId } = getUserAB(d);
-      t.next_performer_id = determineNextPerformer(t.assignment_type, userId, userAId, userBId);
+      t.next_performer_id = determineNextPerformer(t.assignment_type, userId, userAId, userBId, t.fixed_user_id);
     });
 
     return Promise.resolve({ points });
@@ -791,6 +811,176 @@ export const store = {
       });
     });
     return Promise.resolve({ success: true, imported });
+  },
+
+  // --- Sync e Backup (documento Automerge completo — utenti, punti, storico) ---
+  // A differenza di exportTasks()/importTasks() sopra (solo un template di
+  // stanze/task, pensato per non reinserirli a mano), questi lavorano sul
+  // documento CRDT intero: è la base sia per "sincronizza con un altro
+  // telefono" (merge vero, ripetibile) sia per il backup automatico che
+  // sopravvive alla disinstallazione. Vedi PIANO_BROOM_V1_10.md.
+
+  /** Esporta l'intero documento come bytes binari (per condivisione/backup) */
+  exportDoc() {
+    return Promise.resolve(A.save(doc));
+  },
+
+  /**
+   * Importa i bytes del documento di un altro device e li fonde col locale.
+   *
+   * NON usa A.merge(): funziona solo tra documenti con storia condivisa
+   * (un clone comune). Due device che hanno girato initDoc() ciascuno per
+   * conto proprio (il caso normale: due installazioni indipendenti) non
+   * condividono storia — A.merge() tra loro fa "vince l'ultimo" per INTERI
+   * campi (users/rooms/tasks/completions), non un merge voce per voce:
+   * risultato, uno dei due telefoni perderebbe silenziosamente tutti i suoi
+   * dati. Verificato empiricamente prima di scrivere questo commento.
+   *
+   * Fusione manuale invece: utenti e stanze abbinati per nome (riusa l'id
+   * locale se già esistente, come importTasks()); task abbinati per nome +
+   * stessa stanza (se già esiste non viene riaggiunto — idempotente); storico
+   * sempre unito, deduplicato per id (già univoco per device+timestamp).
+   * Punti/date restano quelli calcolati sul device di origine dei rispettivi
+   * fatti — corretto perché completions e punti sono append-only.
+   */
+  importDoc(bytes) {
+    let incoming;
+    try {
+      // Copia in dati semplici: evita di portarsi dietro riferimenti proxy
+      // al documento Automerge di origine, che non si possono assegnare
+      // dentro il change block di un documento diverso.
+      incoming = JSON.parse(JSON.stringify(A.load(bytes)));
+    } catch {
+      return Promise.reject({ message: 'File non valido' });
+    }
+    if (!incoming || !Array.isArray(incoming.tasks)) {
+      return Promise.reject({ message: 'File non valido' });
+    }
+
+    mutate(d => {
+      const userIdMap = new Map();
+      const localUsers = d.users.filter(u => u.is_active !== false);
+      (incoming.users || []).forEach(u => {
+        if (u.is_active === false) return;
+        const match = localUsers.find(lu => lu.name.trim().toLowerCase() === (u.name || '').trim().toLowerCase());
+        if (match) {
+          userIdMap.set(u.id, match.id);
+        } else {
+          const id = nextId();
+          d.users.push({ id, name: u.name, emoji: u.emoji || '🧑', color: u.color || '#E2743A', total_points: 0 });
+          userIdMap.set(u.id, id);
+        }
+      });
+      const mapUserId = (uid) => (uid == null ? null : (userIdMap.get(uid) ?? null));
+
+      const roomIdMap = new Map();
+      const localRooms = d.rooms.filter(r => r.is_active !== false);
+      (incoming.rooms || []).forEach(r => {
+        if (r.is_active === false) return;
+        const match = localRooms.find(lr => lr.name.trim().toLowerCase() === (r.name || '').trim().toLowerCase());
+        if (match) {
+          roomIdMap.set(r.id, match.id);
+        } else {
+          const id = nextId();
+          d.rooms.push({ id, name: r.name, icon: r.icon || 'Home', sort_order: r.sort_order || 0, is_active: true });
+          roomIdMap.set(r.id, id);
+        }
+      });
+
+      const taskIdMap = new Map(); // id incoming -> id locale (nuovo o già esistente)
+      incoming.tasks.forEach(t => {
+        if (t.is_active === false) return;
+        const mappedRoomIds = getRoomIds(t).map(rid => roomIdMap.get(rid)).filter(x => x !== undefined);
+        const nameKey = (t.name || '').trim().toLowerCase();
+        const existing = d.tasks.find(lt =>
+          lt.is_active !== false &&
+          lt.name.trim().toLowerCase() === nameKey &&
+          getRoomIds(lt).some(id => mappedRoomIds.includes(id))
+        );
+        if (existing) {
+          taskIdMap.set(t.id, existing.id); // stesso task: non riaggiunto (idempotente)
+          return;
+        }
+        const id = nextId();
+        taskIdMap.set(t.id, id);
+        d.tasks.push({
+          id,
+          room_ids: mappedRoomIds,
+          name: t.name,
+          frequency_days: t.frequency_days,
+          recurrence_days: Array.isArray(t.recurrence_days) && t.recurrence_days.length > 0 ? t.recurrence_days : null,
+          difficulty: t.difficulty,
+          assignment_type: t.assignment_type || 'ANY',
+          fixed_user_id: mapUserId(t.fixed_user_id),
+          grace_period_days: t.grace_period_days || 0,
+          next_due_date: t.next_due_date || todayISO(),
+          is_active: true,
+          is_quick_action: !!t.is_quick_action,
+          tags: t.tags || null,
+          last_performer_id: mapUserId(t.last_performer_id),
+          next_performer_id: mapUserId(t.next_performer_id),
+          penalized_delays: Array.isArray(t.penalized_delays) ? [...t.penalized_delays] : [],
+          created_at: t.created_at || nowISO(),
+        });
+      });
+
+      const existingCompletionIds = new Set(d.completions.map(c => c.id));
+      (incoming.completions || []).forEach(c => {
+        if (!c.id || existingCompletionIds.has(c.id)) return; // già importato in una sync precedente
+        d.completions.push({
+          id: c.id,
+          task_id: taskIdMap.get(c.task_id) ?? c.task_id,
+          user_id: mapUserId(c.user_id) ?? c.user_id,
+          completed_at: c.completed_at,
+          points_awarded: c.points_awarded,
+          was_on_demand: !!c.was_on_demand,
+          was_automated: !!c.was_automated,
+          is_shared: !!c.is_shared,
+          task_name: c.task_name || null,
+          user_name: c.user_name || null,
+        });
+      });
+    });
+
+    return Promise.resolve({ success: true });
+  },
+
+  /**
+   * Solo su installazione pulita (nessun utente): controlla se esiste un
+   * backup su storage pubblico senza ripristinarlo. Ritorna null se non
+   * siamo su nativo, non c'è nessun backup, o ci sono già utenti (non ha
+   * senso proporlo se il documento attuale non è vuoto).
+   */
+  async checkForBackup() {
+    if (getActiveUsers(doc).length > 0) return null;
+    const adapter = await createStorageAdapter();
+    if (!adapter.isNative) return null;
+    const bytes = await adapter.readBackup();
+    if (!bytes) return null;
+    try {
+      const backupDoc = A.load(bytes);
+      const meta = await adapter.readBackupMeta();
+      return {
+        usersCount: getActiveUsers(backupDoc).length,
+        tasksCount: backupDoc.tasks.filter(t => t.is_active !== false).length,
+        mtime: meta?.mtime ?? null,
+      };
+    } catch {
+      return null;
+    }
+  },
+
+  /** Sostituisce il documento locale (vuoto) con quello del backup trovato */
+  async restoreFromBackup() {
+    const adapter = await createStorageAdapter();
+    if (!adapter.isNative) return Promise.reject({ message: 'Backup non disponibile' });
+    const bytes = await adapter.readBackup();
+    if (!bytes) return Promise.reject({ message: 'Nessun backup trovato' });
+    const loaded = A.load(bytes);
+    doc = A.change(loaded, 'check-overdue-penalties', checkOverduePenalties);
+    scheduleSave(doc);
+    notifyChange();
+    return { success: true };
   },
 
   // --- Utility per integrazione ---

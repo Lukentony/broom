@@ -7,6 +7,7 @@ import { Trophy, ChevronRight } from 'lucide-react';
 import TaskCard from '../components/TaskCard';
 import CompletionSheet from '../components/CompletionSheet';
 import VacationBanner from '../components/VacationBanner';
+import NotificationsOffBanner from '../components/NotificationsOffBanner';
 import PageHeader from '../components/PageHeader';
 
 export default function Dashboard() {
@@ -118,6 +119,7 @@ export default function Dashboard() {
       />
 
       <VacationBanner />
+      <NotificationsOffBanner />
 
       {widgetsOrder.map(renderWidget)}
 

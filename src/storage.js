@@ -31,6 +31,13 @@ class LocalStorageAdapter {
       localStorage.removeItem(key);
     } catch { /* ignore */ }
   }
+
+  // Il backup su storage pubblico ha senso solo su nativo (Android cancella
+  // i dati app-privati alla disinstallazione, il web no ha un equivalente
+  // significativo senza un download esplicito dell'utente).
+  async writeBackup() { /* no-op sul web */ }
+  async readBackup() { return null; }
+  async readBackupMeta() { return null; }
 }
 
 /** Adapter basato su Capacitor Filesystem (nativo) */
@@ -72,6 +79,48 @@ class CapacitorStorageAdapter {
         directory: Directory.Data,
       });
     } catch { /* ignore */ }
+  }
+
+  // Backup su Directory.Documents (storage pubblico dell'app): a differenza
+  // di Directory.Data usato sopra, NON viene cancellato alla disinstallazione
+  // dell'app — è la base del backup automatico (PIANO_BROOM_V1_10.md, punto B).
+  async writeBackup(bytes) {
+    try {
+      const { Filesystem, Directory } = await import('@capacitor/filesystem');
+      const { bytesToBase64 } = await import('./helpers/bytes.js');
+      await Filesystem.mkdir({ path: 'Broom', directory: Directory.Documents, recursive: true }).catch(() => {});
+      await Filesystem.writeFile({
+        path: 'Broom/backup.automerge',
+        data: bytesToBase64(bytes),
+        directory: Directory.Documents,
+      });
+    } catch (e) {
+      console.warn('Backup write error:', e);
+    }
+  }
+
+  async readBackup() {
+    try {
+      const { Filesystem, Directory } = await import('@capacitor/filesystem');
+      const { base64ToBytes } = await import('./helpers/bytes.js');
+      const result = await Filesystem.readFile({
+        path: 'Broom/backup.automerge',
+        directory: Directory.Documents,
+      });
+      return base64ToBytes(result.data);
+    } catch {
+      return null;
+    }
+  }
+
+  async readBackupMeta() {
+    try {
+      const { Filesystem, Directory } = await import('@capacitor/filesystem');
+      const stat = await Filesystem.stat({ path: 'Broom/backup.automerge', directory: Directory.Documents });
+      return { mtime: stat.mtime };
+    } catch {
+      return null;
+    }
   }
 }
 

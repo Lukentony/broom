@@ -73,7 +73,7 @@ export default function TaskCard({ task, roomNames, performerName, onComplete, o
             <span className="text-xs text-ink3">· {roomLabel}</span>
           )}
           <span className="text-xs text-ink3">
-            · {recurrenceLabel(task)} · {task.assignment_type === 'TOGETHER' ? 'Insieme' : task.assignment_type === 'FIXED_A' ? 'Fisso A' : task.assignment_type === 'FIXED_B' ? 'Fisso B' : task.assignment_type === 'ALTERNATING' ? 'Alternato' : 'Chiunque'}
+            · {recurrenceLabel(task)} · {task.assignment_type === 'TOGETHER' ? 'Insieme' : task.assignment_type === 'FIXED_USER' ? 'Fisso' : task.assignment_type === 'FIXED_A' ? 'Fisso A' : task.assignment_type === 'FIXED_B' ? 'Fisso B' : task.assignment_type === 'ALTERNATING' ? 'Alternato' : 'Chiunque'}
           </span>
           {performerName && (
             <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase bg-primary-soft text-primary-ink">

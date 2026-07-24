@@ -60,6 +60,14 @@ describe('Storage Adapter', () => {
       await adapter.remove('test_remove');
       expect(localStorage.getItem('test_remove')).toBeNull();
     });
+
+    it('dovrebbe esporre writeBackup/readBackup/readBackupMeta come no-op sul web (nessun equivalente significativo di "sopravvive alla disinstallazione")', async () => {
+      const { createStorageAdapter } = await import('../storage.js');
+      const adapter = await createStorageAdapter();
+      await expect(adapter.writeBackup(new Uint8Array([1, 2, 3]))).resolves.toBeUndefined();
+      await expect(adapter.readBackup()).resolves.toBeNull();
+      await expect(adapter.readBackupMeta()).resolves.toBeNull();
+    });
   });
 
   describe('getStorageAdapter', () => {

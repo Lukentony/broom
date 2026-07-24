@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import * as A from '@automerge/automerge';
 import { store } from '../store';
 
 // "Oggi" fissato a un mercoledì noto: il default dei giorni di riposo
@@ -203,6 +204,55 @@ describe('Store Module (locale)', () => {
     await store.completeTask(task.id, false);
     const afterTasks = await store.getTasks();
     const after = afterTasks.find(t => t.id === task.id);
+    expect(after.next_performer_id).toBe(userB.id);
+  });
+
+  it('should assign FIXED_USER to the chosen person regardless of creation order', async () => {
+    const userA = await store.addUser('Alice');
+    const userB = await store.addUser('Bob');
+    await store.setCurrentUser(userA.id);
+    const rooms = await store.getRooms();
+    const roomId = rooms[0]?.id || 1;
+    // Fisso su Bob (secondo utente creato) — con la vecchia logica
+    // posizionale "FIXED_B" avrebbe funzionato solo per coincidenza
+    // dell'ordine di creazione; qui l'id è esplicito.
+    await store.createTask({
+      name: 'Fixed user task',
+      room_ids: [roomId],
+      frequency_days: 7,
+      difficulty: 2,
+      assignment_type: 'FIXED_USER',
+      fixed_user_id: userB.id,
+    });
+    const tasks = await store.getTasks();
+    const task = tasks.find(t => t.name === 'Fixed user task');
+    expect(task.next_performer_id).toBe(userB.id);
+
+    // Dopo un completamento (da chiunque) il turno resta fisso sulla stessa persona
+    await store.completeTask(task.id, false);
+    const afterTasks = await store.getTasks();
+    const after = afterTasks.find(t => t.id === task.id);
+    expect(after.next_performer_id).toBe(userB.id);
+  });
+
+  it('should recompute next_performer_id immediately when editing a task to FIXED_USER', async () => {
+    const userA = await store.addUser('Alice');
+    const userB = await store.addUser('Bob');
+    await store.setCurrentUser(userA.id);
+    const rooms = await store.getRooms();
+    const roomId = rooms[0]?.id || 1;
+    await store.createTask({
+      name: 'Any task', room_ids: [roomId], frequency_days: 7, difficulty: 2,
+    });
+    const tasks = await store.getTasks();
+    const task = tasks.find(t => t.name === 'Any task');
+    expect(task.next_performer_id).toBeNull(); // ANY: nessun responsabile
+
+    await store.updateTask(task.id, { assignment_type: 'FIXED_USER', fixed_user_id: userB.id });
+
+    const afterTasks = await store.getTasks();
+    const after = afterTasks.find(t => t.id === task.id);
+    // Prima di questo fix restava null finché non arrivava un completamento
     expect(after.next_performer_id).toBe(userB.id);
   });
 
@@ -447,6 +497,101 @@ describe('Store Module (locale)', () => {
 
   it('should reject an import with no tasks array', async () => {
     await expect(store.importTasks({ rooms: [] })).rejects.toBeDefined();
+  });
+
+  it('should export the full doc as bytes and merge it back into itself without duplicating anything (idempotent)', async () => {
+    await seed();
+    const before = await store.getTasks();
+    const bytes = await store.exportDoc();
+    expect(bytes).toBeInstanceOf(Uint8Array);
+
+    await store.importDoc(bytes);
+
+    const after = await store.getTasks();
+    expect(after.length).toBe(before.length);
+  });
+
+  it('should merge a doc from a simulated second device (same default rooms) without duplicating the seeded rooms', async () => {
+    // Stesso seed di initDoc() in store.js: due installazioni fresche
+    // indipendenti creano le STESSE 4 stanze di default come inserimenti
+    // CRDT distinti — senza dedupe, il merge le raddoppierebbe.
+    const deviceB = A.from({
+      users: [{ id: 999, name: 'DeviceB User', emoji: '🧑', color: '#000', total_points: 0 }],
+      rooms: [
+        { id: 1, name: 'Cucina', icon: 'ChefHat', sort_order: 0, is_active: true },
+        { id: 2, name: 'Bagno', icon: 'Bath', sort_order: 1, is_active: true },
+        { id: 3, name: 'Soggiorno', icon: 'Sofa', sort_order: 2, is_active: true },
+        { id: 4, name: 'Camera', icon: 'BedDouble', sort_order: 3, is_active: true },
+      ],
+      tasks: [],
+      completions: [],
+    });
+    const bytesFromB = A.save(deviceB);
+
+    await seed(); // device locale: TestUser + 'Seed task' in rooms[0] (Cucina)
+    const roomsBefore = await store.getRooms();
+    expect(roomsBefore.length).toBe(4);
+
+    await store.importDoc(bytesFromB);
+
+    const roomsAfter = await store.getRooms();
+    expect(roomsAfter.length).toBe(4); // non 8: le stanze duplicate sono state fuse
+
+    const users = await store.getUsers();
+    expect(users.some(u => u.name === 'TestUser')).toBe(true);
+    expect(users.some(u => u.name === 'DeviceB User')).toBe(true);
+
+    // Il task esistente deve ancora puntare a una stanza valida e contata
+    const cucina = roomsAfter.find(r => r.name === 'Cucina');
+    expect(cucina.task_count).toBeGreaterThanOrEqual(1);
+  });
+
+  it('should import tasks/history/points from a genuinely different device, without duplicating on a repeat import', async () => {
+    const deviceB = A.from({
+      users: [{ id: 501, name: 'Partner', emoji: '🧑', color: '#000', total_points: 0 }],
+      rooms: [{ id: 1, name: 'Cucina', icon: 'ChefHat', sort_order: 0, is_active: true }],
+      tasks: [{
+        id: 42, room_ids: [1], name: 'Task del partner', frequency_days: 7,
+        recurrence_days: null, difficulty: 4, assignment_type: 'ANY', fixed_user_id: null,
+        grace_period_days: 0, next_due_date: '2026-08-01', is_active: true, is_quick_action: false,
+        tags: null, last_performer_id: 501, next_performer_id: null, penalized_delays: [],
+        created_at: '2026-07-01T00:00:00.000Z',
+      }],
+      completions: [{
+        id: 'c_device_b_1', task_id: 42, user_id: 501, completed_at: '2026-07-10T09:00:00.000Z',
+        points_awarded: 40, was_on_demand: false, was_automated: false, is_shared: false,
+        task_name: 'Task del partner', user_name: null,
+      }],
+    });
+    const bytes = A.save(deviceB);
+
+    await seed(); // 'Cucina' di default già presente localmente
+    await store.importDoc(bytes);
+
+    const users = await store.getUsers();
+    expect(users.some(u => u.name === 'Partner')).toBe(true);
+
+    const tasks = await store.getTasks();
+    expect(tasks.some(t => t.name === 'Task del partner')).toBe(true);
+
+    const history = await store.getHistory(365);
+    expect(history.some(h => h.task_name === 'Task del partner' && h.points_awarded === 40)).toBe(true);
+
+    // Reimportando lo stesso file non deve duplicare né il task né lo storico
+    await store.importDoc(bytes);
+    const tasksAfter = await store.getTasks();
+    expect(tasksAfter.filter(t => t.name === 'Task del partner').length).toBe(1);
+    const historyAfter = await store.getHistory(365);
+    expect(historyAfter.filter(h => h.task_name === 'Task del partner').length).toBe(1);
+  });
+
+  it('should reject importDoc with invalid bytes', async () => {
+    await expect(store.importDoc(new Uint8Array([1, 2, 3]))).rejects.toBeDefined();
+  });
+
+  it('checkForBackup/restoreFromBackup should safely no-op outside a native environment (jsdom)', async () => {
+    await expect(store.checkForBackup()).resolves.toBeNull();
+    await expect(store.restoreFromBackup()).rejects.toBeDefined();
   });
 
   it('should shift the due date past a custom no-work day', async () => {

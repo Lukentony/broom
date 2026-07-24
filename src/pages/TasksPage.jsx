@@ -187,18 +187,25 @@ function TaskForm({ task, rooms, users, onSave, onDelete, onSnooze, onClose }) {
   const [selectedDays, setSelectedDays] = useState(task?.recurrence_days || []);
   const [dueDateOverride, setDueDateOverride] = useState(task?.next_due_date || '');
   const [difficulty, setDifficulty] = useState(task?.difficulty || 3);
-  const [assignment, setAssignment] = useState(task?.assignment_type || 'TOGETHER');
+  // FIXED_A/FIXED_B (posizionale: "primo utente creato"/"secondo") restano
+  // riconosciuti per i task già esistenti, ma non più selezionabili da qui:
+  // aprendo un task così assegnato, lo "aggiorniamo" per persona reale senza
+  // bisogno di una migrazione a parte — basta salvare di nuovo il form.
+  const isLegacyFixed = task?.assignment_type === 'FIXED_A' || task?.assignment_type === 'FIXED_B';
+  const [assignment, setAssignment] = useState(isLegacyFixed ? 'FIXED_USER' : (task?.assignment_type || 'TOGETHER'));
+  const [fixedUserId, setFixedUserId] = useState(() => {
+    if (task?.fixed_user_id != null) return task.fixed_user_id;
+    if (task?.assignment_type === 'FIXED_A') return users?.[0]?.user_id ?? null;
+    if (task?.assignment_type === 'FIXED_B') return users?.[1]?.user_id ?? null;
+    return users?.[0]?.user_id ?? null;
+  });
   const [tags, setTags] = useState(task?.tags || '');
   const [saving, setSaving] = useState(false);
-
-  const userAName = users?.[0]?.user_name || 'Lu';
-  const userBName = users?.[1]?.user_name || 'Luca';
 
   const assignmentOptions = [
     { value: 'ANY', label: 'Chiunque' },
     { value: 'ALTERNATING', label: 'Alternato' },
-    { value: 'FIXED_A', label: `Fisso ${userAName}` },
-    { value: 'FIXED_B', label: `Fisso ${userBName}` },
+    ...(users || []).map(u => ({ value: 'FIXED_USER', fixedUserId: u.user_id, label: `Fisso ${u.user_name}` })),
     { value: 'TOGETHER', label: 'Insieme' },
   ];
 
@@ -227,6 +234,7 @@ function TaskForm({ task, rooms, users, onSave, onDelete, onSnooze, onClose }) {
       next_due_date: dueDateOverride || undefined,
       difficulty: Number(difficulty),
       assignment_type: assignment,
+      fixed_user_id: assignment === 'FIXED_USER' ? fixedUserId : null,
       tags: tags.trim() || null,
       grace_period_days: 1,
     });
@@ -385,18 +393,27 @@ function TaskForm({ task, rooms, users, onSave, onDelete, onSnooze, onClose }) {
           <div>
             <label className="text-xs font-bold text-ink2 uppercase tracking-wider mb-1.5 block">Assegnazione</label>
             <div className="flex gap-2 flex-wrap">
-              {assignmentOptions.map(o => (
-                <button
-                  key={o.value}
-                  onClick={() => setAssignment(o.value)}
-                  className={clsx(
-                    'px-3 py-2 rounded-xl text-xs font-bold transition-colors',
-                    assignment === o.value ? 'bg-primary text-white' : 'bg-background-sunken text-ink2'
-                  )}
-                >
-                  {o.label}
-                </button>
-              ))}
+              {assignmentOptions.map(o => {
+                const isFixedUser = o.value === 'FIXED_USER';
+                const isActive = isFixedUser
+                  ? assignment === 'FIXED_USER' && fixedUserId === o.fixedUserId
+                  : assignment === o.value;
+                return (
+                  <button
+                    key={isFixedUser ? `fixed-${o.fixedUserId}` : o.value}
+                    onClick={() => {
+                      setAssignment(o.value);
+                      if (isFixedUser) setFixedUserId(o.fixedUserId);
+                    }}
+                    className={clsx(
+                      'px-3 py-2 rounded-xl text-xs font-bold transition-colors',
+                      isActive ? 'bg-primary text-white' : 'bg-background-sunken text-ink2'
+                    )}
+                  >
+                    {o.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 

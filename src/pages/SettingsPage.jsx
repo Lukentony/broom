@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSettings } from '../hooks/useSettings';
-import { Plane, Settings, Layout, Users, LogOut, UserCircle, Award, Bell, UserPlus, CalendarOff, Download, Upload } from 'lucide-react';
+import { Plane, Settings, Layout, Users, LogOut, UserCircle, Award, Bell, UserPlus, CalendarOff, Download, Upload, Smartphone } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import { store } from '../store';
 import { requestPermissions, checkPermissions } from '../services/notifications';
@@ -43,6 +43,10 @@ export default function SettingsPage() {
 
   const [importResult, setImportResult] = useState(null);
   const [importing, setImporting] = useState(false);
+
+  const [syncing, setSyncing] = useState(false);
+  const [importingSync, setImportingSync] = useState(false);
+  const [syncResult, setSyncResult] = useState(null);
 
   useEffect(() => {
     store.getStats().then(data => setUsers(data.leaderboard || [])).catch(() => {});
@@ -186,6 +190,65 @@ export default function SettingsPage() {
       setImportResult('File non valido ❌');
     }
     setImporting(false);
+  };
+
+  // Sincronizza con un altro telefono: condivide l'intero documento (utenti,
+  // punti, storico — non solo i task) via il menu di condivisione nativo, e
+  // lo importa fondendolo col locale (store.importDoc — utenti/stanze per
+  // nome, task per nome+stanza, storico deduplicato per id: ripetibile, mai
+  // duplicati). Diverso da "Esporta/Importa Task" qui sotto, che è solo un
+  // template di stanze/task senza punti/storico. Vedi PIANO_BROOM_V1_10.md
+  // punto A2.
+  const handleShareSync = async () => {
+    setSyncing(true);
+    setSyncResult(null);
+    const bytes = await store.exportDoc();
+    const filename = `broom-sync-${new Date().toISOString().split('T')[0]}.automerge`;
+    try {
+      const { Filesystem, Directory } = await import('@capacitor/filesystem');
+      const { Share } = await import('@capacitor/share');
+      const { bytesToBase64 } = await import('../helpers/bytes.js');
+      const written = await Filesystem.writeFile({
+        path: filename,
+        data: bytesToBase64(bytes),
+        directory: Directory.Cache,
+      });
+      await Share.share({
+        title: 'Broom - dati casa',
+        url: written.uri,
+        dialogTitle: 'Condividi con...',
+      });
+    } catch {
+      // Web/dev, o niente app di condivisione disponibile: scarica il file.
+      const blob = new Blob([bytes], { type: 'application/octet-stream' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+    setSyncing(false);
+  };
+
+  const handleImportSync = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setImportingSync(true);
+    setSyncResult(null);
+    try {
+      const buf = await file.arrayBuffer();
+      await store.importDoc(new Uint8Array(buf));
+      setSyncResult('Sincronizzato ✨');
+      store.getStats().then(data => setUsers(data.leaderboard || [])).catch(() => {});
+      await refetch();
+    } catch (err) {
+      setSyncResult('File non valido ❌');
+    }
+    setImportingSync(false);
   };
 
   const toggleWidgetHidden = (w) => {
@@ -569,6 +632,40 @@ export default function SettingsPage() {
             {savingWidgets ? 'Salvataggio...' : 'Salva Visibilità'}
           </button>
         </div>
+      </section>
+
+      {/* Sincronizza con un altro telefono */}
+      <section className="bg-white p-5 rounded-[2rem] border border-hairline shadow-sm space-y-3">
+        <div className="flex items-center gap-3 px-1">
+          <Smartphone className="w-5 h-5 text-primary" />
+          <p className="font-bold text-ink text-sm uppercase tracking-wider">Sincronizza con un altro telefono</p>
+        </div>
+        <p className="text-[10px] text-ink3 leading-relaxed px-1">
+          Condividi tutti i dati (utenti, punti, storico) con l'app di
+          condivisione che preferisci (Bluetooth, Nearby Share, WhatsApp...).
+          Non è automatico: va rifatto ogni volta che volete allinearvi, ma è
+          sicuro farlo quante volte vuoi — non crea mai doppioni.
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={handleShareSync}
+            disabled={syncing}
+            className="flex items-center justify-center gap-2 py-3 bg-ink text-white rounded-2xl font-black text-xs uppercase tracking-widest active:scale-[0.98] transition-all disabled:opacity-50"
+          >
+            <Smartphone size={14} />
+            {syncing ? '...' : 'Condividi'}
+          </button>
+          <label className="flex items-center justify-center gap-2 py-3 bg-background-sunken text-ink2 rounded-2xl font-black text-xs uppercase tracking-widest active:scale-[0.98] transition-all cursor-pointer">
+            <Upload size={14} />
+            {importingSync ? '...' : 'Ricevi'}
+            <input type="file" accept=".automerge" onChange={handleImportSync} disabled={importingSync} className="hidden" />
+          </label>
+        </div>
+        {syncResult && (
+          <div className="bg-primary-soft p-3 rounded-xl text-center">
+            <p className="text-xs font-bold text-primary-ink">{syncResult}</p>
+          </div>
+        )}
       </section>
 
       {/* Esporta/Importa Task */}
