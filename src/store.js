@@ -14,6 +14,22 @@ import { updateNotifications } from './services/notifications.js';
 const STORAGE_KEY = 'broom_doc_v2';
 const SETTINGS_KEY = 'broom_settings';
 
+// Dichiarata qui (prima del boot dello store più sotto) perché
+// checkOverduePenalties() gira già al caricamento del modulo tramite
+// getScoringSettings() — una const dichiarata più in basso darebbe un
+// errore di temporal dead zone alla primissima esecuzione.
+const SCORING_DEFAULTS = {
+  baseMultiplier: 10,
+  splitShared: true,
+  graceDays: 0,
+  lateBonusPoints: 1,
+  lateNegativeEnabled: true,
+  autoPenaltyEnabled: true,
+  autoPenaltyDay1: 1,
+  autoPenaltyPoints1: 1,
+  autoPenaltyDay2: 3,
+};
+
 let _nativeAdapter = null;
 let saveTimer = null;
 function scheduleSave(doc) {
@@ -142,6 +158,40 @@ function getNoWorkDays() {
   }
 }
 
+// Legge un intero da una stringa di settings, con un default esplicito.
+// Non usa `||` perché 0 è un valore valido e voluto (es. "0 giorni di
+// tolleranza", "0 punti bonus") — `parseInt(v) || def` lo scambierebbe
+// per "non impostato".
+function parseSettingInt(value, def) {
+  if (value === undefined || value === '') return def;
+  const n = parseInt(value, 10);
+  return Number.isNaN(n) ? def : n;
+}
+
+// Tutte le regole punteggio configurabili da Impostazioni, con gli stessi
+// default del comportamento cablato di prima (nessuna sorpresa per chi non
+// tocca nulla). Letto ad ogni completamento/controllo penalità invece che
+// una volta sola, così un cambio in Impostazioni ha effetto subito.
+function getScoringSettings() {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    const s = raw ? JSON.parse(raw) : {};
+    return {
+      baseMultiplier: parseSettingInt(s.scoring_base, SCORING_DEFAULTS.baseMultiplier),
+      splitShared: s.scoring_split_shared !== 'false',
+      graceDays: parseSettingInt(s.scoring_grace_days, SCORING_DEFAULTS.graceDays),
+      lateBonusPoints: parseSettingInt(s.scoring_late_bonus, SCORING_DEFAULTS.lateBonusPoints),
+      lateNegativeEnabled: s.scoring_late_negative !== 'false',
+      autoPenaltyEnabled: s.scoring_auto_penalty_enabled !== 'false',
+      autoPenaltyDay1: parseSettingInt(s.scoring_auto_penalty_days1, SCORING_DEFAULTS.autoPenaltyDay1),
+      autoPenaltyPoints1: parseSettingInt(s.scoring_auto_penalty_points1, SCORING_DEFAULTS.autoPenaltyPoints1),
+      autoPenaltyDay2: parseSettingInt(s.scoring_auto_penalty_days2, SCORING_DEFAULTS.autoPenaltyDay2),
+    };
+  } catch {
+    return { ...SCORING_DEFAULTS };
+  }
+}
+
 // Penalità automatica sui task lasciati scaduti senza completarli (mai
 // tirati indietro se completati): soglie fisse a 1 e 3 giorni di ritardo,
 // una volta sola per soglia per ciclo di scadenza (task.penalized_delays,
@@ -156,6 +206,9 @@ function checkOverduePenalties(d) {
   const today = new Date();
   if (getNoWorkDays().includes(today.getDay())) return;
 
+  const scoring = getScoringSettings();
+  if (!scoring.autoPenaltyEnabled) return;
+
   const todayStr = todayISO();
   const { userAId, userBId } = getUserAB(d);
   const active = getActiveUsers(d);
@@ -163,15 +216,20 @@ function checkOverduePenalties(d) {
   d.tasks.forEach(t => {
     if (t.is_active === false || t.is_quick_action) return;
     const due = new Date(t.next_due_date);
-    const delayDays = Math.floor((new Date(todayStr) - due) / 86400000);
+    const rawDelay = Math.floor((new Date(todayStr) - due) / 86400000);
+    const delayDays = rawDelay - scoring.graceDays;
     if (delayDays < 1) return;
 
     const penalized = Array.isArray(t.penalized_delays) ? t.penalized_delays : [];
     if (!t.penalized_delays) t.penalized_delays = penalized;
 
-    for (const threshold of [1, 3]) {
+    for (const threshold of [scoring.autoPenaltyDay1, scoring.autoPenaltyDay2]) {
       if (delayDays < threshold || penalized.includes(threshold)) continue;
-      const penalty = calculateOverduePenalty(t.difficulty, threshold);
+      const penalty = calculateOverduePenalty(t.difficulty, threshold, scoring.baseMultiplier, {
+        day1: scoring.autoPenaltyDay1,
+        points1: scoring.autoPenaltyPoints1,
+        day2: scoring.autoPenaltyDay2,
+      });
       if (penalty <= 0) continue;
 
       let targets = [];
@@ -328,10 +386,21 @@ export const store = {
     if (!task) return Promise.reject({ status: 404, message: 'Task non trovato' });
 
     const overdue = daysOverdue(task);
+    // Prima leggeva solo i default cablati (10, true) — moltiplicatore e
+    // "dividi condivisi" configurati in Impostazioni non venivano mai usati
+    // davvero nel calcolo reale. Fix incluso qui insieme alle nuove regole.
+    const scoring = getScoringSettings();
     const { points, isShared } = calculatePoints(
       task.difficulty,
       task.assignment_type,
-      overdue
+      overdue,
+      scoring.baseMultiplier,
+      scoring.splitShared,
+      {
+        graceDays: scoring.graceDays,
+        lateBonusPoints: scoring.lateBonusPoints,
+        lateNegativeEnabled: scoring.lateNegativeEnabled,
+      }
     );
 
     mutate(d => {
@@ -598,10 +667,18 @@ export const store = {
   },
 
   patchScoring(data) {
-    return store.patchPreferences({
+    const payload = {
       scoring_base: String(data.base || 10),
       scoring_split_shared: data.split_shared !== false ? 'true' : 'false',
-    });
+    };
+    if (data.grace_days !== undefined) payload.scoring_grace_days = String(data.grace_days);
+    if (data.late_bonus !== undefined) payload.scoring_late_bonus = String(data.late_bonus);
+    if (data.late_negative_enabled !== undefined) payload.scoring_late_negative = data.late_negative_enabled ? 'true' : 'false';
+    if (data.auto_penalty_enabled !== undefined) payload.scoring_auto_penalty_enabled = data.auto_penalty_enabled ? 'true' : 'false';
+    if (data.auto_penalty_days1 !== undefined) payload.scoring_auto_penalty_days1 = String(data.auto_penalty_days1);
+    if (data.auto_penalty_points1 !== undefined) payload.scoring_auto_penalty_points1 = String(data.auto_penalty_points1);
+    if (data.auto_penalty_days2 !== undefined) payload.scoring_auto_penalty_days2 = String(data.auto_penalty_days2);
+    return store.patchPreferences(payload);
   },
 
   renameUser(id, name) {

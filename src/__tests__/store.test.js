@@ -47,6 +47,49 @@ describe('Store Module (locale)', () => {
     expect(typeof result.points).toBe('number');
   });
 
+  it('should actually use the configured base multiplier and split setting (regression: completeTask ignored them before)', async () => {
+    await store.patchScoring({ base: 20, split_shared: true });
+    await seed(); // task difficulty:3
+    const tasks = await store.getTasks();
+    const task = tasks.find(t => t.name === 'Seed task');
+    // completato in tempo (frequency_days:7, next_due_date nel futuro): 3 * 20 = 60
+    const result = await store.completeTask(task.id, false);
+    expect(result.points).toBe(60);
+  });
+
+  it('should apply the configured grace period before the late bonus/penalty kick in', async () => {
+    await store.patchScoring({ base: 10, grace_days: 3 });
+    const rooms = await store.getRooms();
+    const roomId = rooms[0]?.id || 1;
+    await store.createTask({
+      name: 'Grace task', room_ids: [roomId], frequency_days: 7, difficulty: 2,
+    });
+    const tasks = await store.getTasks();
+    const task = tasks.find(t => t.name === 'Grace task');
+    // due date in futuro -> completandolo subito e' comunque "in tempo" (0 ritardo)
+    // simuliamo un ritardo di 3gg spostando la scadenza a 3gg fa: con 3gg di tolleranza
+    // il ritardo "effettivo" e' 0, quindi punti pieni (non il bonus da ritardo lieve)
+    const threeDaysAgo = new Date(FIXED_TODAY);
+    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+    await store.updateTask(task.id, { next_due_date: threeDaysAgo.toISOString().split('T')[0] });
+    const result = await store.completeTask(task.id, false);
+    expect(result.points).toBe(20); // 2 * 10, non il bonus da ritardo (sarebbe stato 1)
+  });
+
+  it('should return 0 instead of negative points when late-negative is disabled', async () => {
+    await store.patchScoring({ base: 10, late_negative_enabled: false });
+    const rooms = await store.getRooms();
+    const roomId = rooms[0]?.id || 1;
+    await store.createTask({ name: 'No-penalty task', room_ids: [roomId], frequency_days: 7, difficulty: 3 });
+    const tasks = await store.getTasks();
+    const task = tasks.find(t => t.name === 'No-penalty task');
+    const fiveDaysAgo = new Date(FIXED_TODAY);
+    fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
+    await store.updateTask(task.id, { next_due_date: fiveDaysAgo.toISOString().split('T')[0] });
+    const result = await store.completeTask(task.id, false);
+    expect(result.points).toBe(0);
+  });
+
   it('should getStats with user_id and user_name', async () => {
     await seed();
     const stats = await store.getStats();
@@ -263,6 +306,54 @@ describe('Store Module (locale)', () => {
     const history = await store.getHistory(30);
     const penalties = history.filter(h => h.task_name.includes('penalità'));
     expect(penalties.length).toBe(1);
+  });
+
+  it('should not apply any automatic penalty when disabled in settings', async () => {
+    await store.patchScoring({ base: 10, auto_penalty_enabled: false });
+    await seed();
+    const tasks = await store.getTasks();
+    const task = tasks.find(t => t.name === 'Seed task');
+    const yesterday = new Date(FIXED_TODAY);
+    yesterday.setDate(yesterday.getDate() - 1);
+    await store.updateTask(task.id, { next_due_date: yesterday.toISOString().split('T')[0], assignment_type: 'TOGETHER' });
+
+    await store._checkOverduePenalties();
+
+    const history = await store.getHistory(30);
+    expect(history.filter(h => h.task_name.includes('penalità')).length).toBe(0);
+  });
+
+  it('should use custom thresholds/points for the automatic penalty', async () => {
+    await store.patchScoring({ base: 10, auto_penalty_days1: 2, auto_penalty_points1: 4, auto_penalty_days2: 5 });
+    await seed();
+    const tasks = await store.getTasks();
+    const task = tasks.find(t => t.name === 'Seed task');
+    const twoDaysAgo = new Date(FIXED_TODAY);
+    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+    await store.updateTask(task.id, { next_due_date: twoDaysAgo.toISOString().split('T')[0], assignment_type: 'TOGETHER' });
+
+    await store._checkOverduePenalties();
+
+    const history = await store.getHistory(30);
+    const penalty = history.find(h => h.task_name.includes('penalità'));
+    expect(penalty).toBeDefined();
+    expect(penalty.points_awarded).toBe(-4); // non -1: la soglia default (1gg) non si applica più
+  });
+
+  it('should apply the grace period to the automatic penalty too', async () => {
+    await store.patchScoring({ base: 10, grace_days: 2 });
+    await seed();
+    const tasks = await store.getTasks();
+    const task = tasks.find(t => t.name === 'Seed task');
+    const oneDayAgo = new Date(FIXED_TODAY);
+    oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+    await store.updateTask(task.id, { next_due_date: oneDayAgo.toISOString().split('T')[0], assignment_type: 'TOGETHER' });
+
+    await store._checkOverduePenalties();
+
+    // 1gg di ritardo reale - 2gg di tolleranza = ritardo effettivo negativo, nessuna soglia raggiunta
+    const history = await store.getHistory(30);
+    expect(history.filter(h => h.task_name.includes('penalità')).length).toBe(0);
   });
 
   it('should get history', async () => {

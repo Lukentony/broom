@@ -17,6 +17,13 @@ export default function SettingsPage() {
   const [widgets, setWidgets] = useState({ order: ['leaderboard', 'urgent'], hidden: [] });
   const [scoringBase, setScoringBase] = useState(10);
   const [scoringSplitShared, setScoringSplitShared] = useState(true);
+  const [graceDays, setGraceDays] = useState(0);
+  const [lateBonus, setLateBonus] = useState(1);
+  const [lateNegativeEnabled, setLateNegativeEnabled] = useState(true);
+  const [autoPenaltyEnabled, setAutoPenaltyEnabled] = useState(true);
+  const [autoPenaltyDays1, setAutoPenaltyDays1] = useState(1);
+  const [autoPenaltyPoints1, setAutoPenaltyPoints1] = useState(1);
+  const [autoPenaltyDays2, setAutoPenaltyDays2] = useState(3);
   const [savingPrefs, setSavingPrefs] = useState(false);
   const [savingWidgets, setSavingWidgets] = useState(false);
   const [savingScoring, setSavingScoring] = useState(false);
@@ -55,6 +62,13 @@ export default function SettingsPage() {
       });
       setScoringBase(parseInt(settings.scoring_base, 10) || 10);
       setScoringSplitShared(settings.scoring_split_shared !== 'false');
+      setGraceDays(settings.scoring_grace_days !== undefined ? parseInt(settings.scoring_grace_days, 10) : 0);
+      setLateBonus(settings.scoring_late_bonus !== undefined ? parseInt(settings.scoring_late_bonus, 10) : 1);
+      setLateNegativeEnabled(settings.scoring_late_negative !== 'false');
+      setAutoPenaltyEnabled(settings.scoring_auto_penalty_enabled !== 'false');
+      setAutoPenaltyDays1(settings.scoring_auto_penalty_days1 !== undefined ? parseInt(settings.scoring_auto_penalty_days1, 10) : 1);
+      setAutoPenaltyPoints1(settings.scoring_auto_penalty_points1 !== undefined ? parseInt(settings.scoring_auto_penalty_points1, 10) : 1);
+      setAutoPenaltyDays2(settings.scoring_auto_penalty_days2 !== undefined ? parseInt(settings.scoring_auto_penalty_days2, 10) : 3);
       setNoWorkDays(
         settings.no_work_days === undefined
           ? [0, 6]
@@ -67,7 +81,14 @@ export default function SettingsPage() {
     setSavingScoring(true);
     await updateScoring({
       base: scoringBase,
-      split_shared: scoringSplitShared
+      split_shared: scoringSplitShared,
+      grace_days: graceDays,
+      late_bonus: lateBonus,
+      late_negative_enabled: lateNegativeEnabled,
+      auto_penalty_enabled: autoPenaltyEnabled,
+      auto_penalty_days1: autoPenaltyDays1,
+      auto_penalty_points1: autoPenaltyPoints1,
+      auto_penalty_days2: autoPenaltyDays2,
     }).catch(() => {});
     setSavingScoring(false);
   };
@@ -378,13 +399,78 @@ export default function SettingsPage() {
           </div>
           <label className="flex items-center justify-between text-sm font-semibold text-ink2">
             Dividi punti condivisi
-            <input 
-              type="checkbox" 
-              checked={scoringSplitShared} 
+            <input
+              type="checkbox"
+              checked={scoringSplitShared}
               onChange={(e) => setScoringSplitShared(e.target.checked)}
               className="w-5 h-5 accent-primary rounded-lg"
             />
           </label>
+
+          <div className="border-t border-hairline pt-4 space-y-4">
+            <p className="text-[10px] font-bold text-ink3 uppercase tracking-widest">Ritardi</p>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-semibold text-ink2">Giorni di tolleranza</span>
+              <input
+                type="number" min={0} max={30}
+                value={graceDays}
+                onChange={(e) => setGraceDays(parseInt(e.target.value, 10) || 0)}
+                className="w-16 px-2 py-2 text-center bg-background-sunken border border-hairline rounded-xl outline-none font-bold text-sm"
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-semibold text-ink2">Punti per ritardo lieve</span>
+              <input
+                type="number" min={0} max={100}
+                value={lateBonus}
+                onChange={(e) => setLateBonus(parseInt(e.target.value, 10) || 0)}
+                className="w-16 px-2 py-2 text-center bg-background-sunken border border-hairline rounded-xl outline-none font-bold text-sm"
+              />
+            </div>
+            <label className="flex items-center justify-between text-sm font-semibold text-ink2">
+              Il ritardo grave toglie punti
+              <input
+                type="checkbox"
+                checked={lateNegativeEnabled}
+                onChange={(e) => setLateNegativeEnabled(e.target.checked)}
+                className="w-5 h-5 accent-urgent rounded-lg"
+              />
+            </label>
+          </div>
+
+          <div className="border-t border-hairline pt-4 space-y-4">
+            <label className="flex items-center justify-between text-sm font-semibold text-ink2">
+              Penalità automatica (task mai fatto)
+              <input
+                type="checkbox"
+                checked={autoPenaltyEnabled}
+                onChange={(e) => setAutoPenaltyEnabled(e.target.checked)}
+                className="w-5 h-5 accent-urgent rounded-lg"
+              />
+            </label>
+            {autoPenaltyEnabled && (
+              <div className="space-y-4 pl-1">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs text-ink2">1ª soglia: dopo giorni / punti persi</span>
+                  <div className="flex gap-1.5 flex-shrink-0">
+                    <input type="number" min={1} max={30} value={autoPenaltyDays1}
+                      onChange={(e) => setAutoPenaltyDays1(parseInt(e.target.value, 10) || 1)}
+                      className="w-12 px-1 py-2 text-center bg-background-sunken border border-hairline rounded-xl outline-none font-bold text-sm" />
+                    <input type="number" min={0} max={100} value={autoPenaltyPoints1}
+                      onChange={(e) => setAutoPenaltyPoints1(parseInt(e.target.value, 10) || 0)}
+                      className="w-12 px-1 py-2 text-center bg-background-sunken border border-hairline rounded-xl outline-none font-bold text-sm" />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs text-ink2">2ª soglia: dopo giorni (punti = difficoltà × {scoringBase})</span>
+                  <input type="number" min={1} max={30} value={autoPenaltyDays2}
+                    onChange={(e) => setAutoPenaltyDays2(parseInt(e.target.value, 10) || 1)}
+                    className="w-12 px-1 py-2 text-center bg-background-sunken border border-hairline rounded-xl outline-none font-bold text-sm flex-shrink-0" />
+                </div>
+              </div>
+            )}
+          </div>
+
           <button
             onClick={handleSaveScoring}
             disabled={savingScoring}
@@ -394,15 +480,24 @@ export default function SettingsPage() {
           </button>
 
           <div className="bg-background-sunken p-4 rounded-2xl space-y-2">
-            <p className="text-[10px] font-bold text-ink3 uppercase tracking-widest">Come si calcolano</p>
+            <p className="text-[10px] font-bold text-ink3 uppercase tracking-widest">Come si calcolano, con le tue regole</p>
             <ul className="text-xs text-ink2 space-y-1.5 leading-relaxed">
-              <li>• In tempo: difficoltà × {scoringBase} (es. difficoltà 3 = {3 * scoringBase} punti)</li>
-              <li>• Con 1 giorno di ritardo: solo +1 punto</li>
-              <li>• Con più di 1 giorno di ritardo: punti negativi, -(difficoltà × {scoringBase})</li>
+              <li>• In tempo{graceDays > 0 ? ` (o entro ${graceDays} ${graceDays === 1 ? 'giorno' : 'giorni'} di tolleranza)` : ''}: difficoltà × {scoringBase} (es. difficoltà 3 = {3 * scoringBase} punti)</li>
+              <li>• 1 giorno di ritardo oltre la tolleranza: solo {lateBonus} {lateBonus === 1 ? 'punto' : 'punti'}</li>
+              <li>
+                • Più di 1 giorno di ritardo oltre la tolleranza:{' '}
+                {lateNegativeEnabled ? `punti negativi, -(difficoltà × ${scoringBase})` : '0 punti (nessuna penalità)'}
+              </li>
               {scoringSplitShared && (
                 <li>• Task "Insieme": i punti sopra si dividono a metà tra i due</li>
               )}
-              <li>• Task scaduto mai completato: penalità automatica -1 dopo 1 giorno, -(difficoltà × {scoringBase}) dopo 3 giorni (salta weekend/giorni di riposo/vacanza; solo per task con un responsabile — non "Chiunque")</li>
+              <li>
+                • Task scaduto mai completato:{' '}
+                {autoPenaltyEnabled
+                  ? `penalità automatica -${autoPenaltyPoints1} dopo ${autoPenaltyDays1} ${autoPenaltyDays1 === 1 ? 'giorno' : 'giorni'}, -(difficoltà × ${scoringBase}) dopo ${autoPenaltyDays2} giorni`
+                  : 'nessuna penalità automatica'}
+                {' '}(salta weekend/giorni di riposo/vacanza; solo per task con un responsabile — non "Chiunque")
+              </li>
             </ul>
           </div>
         </div>

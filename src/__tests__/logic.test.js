@@ -59,21 +59,53 @@ describe('scoring.js — calculatePoints', () => {
     expect(result.points).toBe(1);
     expect(result.isShared).toBe(true);
   });
+
+  it('should default to no grace period (unchanged behavior without opts)', () => {
+    expect(calculatePoints(3, 'FIXED_A', 1).points).toBe(1); // 1gg ritardo, bonus default
+    expect(calculatePoints(3, 'FIXED_A', 2).points).toBe(-30); // oltre, negativo default
+  });
+
+  it('should shift the late thresholds by graceDays', () => {
+    // 2gg di ritardo con 2gg di tolleranza = in tempo, punti pieni
+    const onTime = calculatePoints(3, 'FIXED_A', 2, 10, true, { graceDays: 2 });
+    expect(onTime.points).toBe(30);
+    // 3gg di ritardo con 2gg di tolleranza = 1gg effettivo, bonus
+    const lightLate = calculatePoints(3, 'FIXED_A', 3, 10, true, { graceDays: 2 });
+    expect(lightLate.points).toBe(1);
+  });
+
+  it('should use a custom late bonus instead of the fixed +1', () => {
+    const result = calculatePoints(3, 'FIXED_A', 1, 10, true, { lateBonusPoints: 5 });
+    expect(result.points).toBe(5);
+  });
+
+  it('should return 0 instead of negative when lateNegativeEnabled is false', () => {
+    const result = calculatePoints(3, 'FIXED_A', 2, 10, true, { lateNegativeEnabled: false });
+    expect(result.points).toBe(0);
+  });
 });
 
 describe('scoring.js — calculateOverduePenalty', () => {
-  it('should return a 1-point penalty at exactly 1 day overdue', () => {
+  it('should return a 1-point penalty at exactly 1 day overdue (default)', () => {
     expect(calculateOverduePenalty(3, 1)).toBe(1);
   });
 
-  it('should return difficulty*base penalty at exactly 3 days overdue', () => {
+  it('should return difficulty*base penalty at exactly 3 days overdue (default)', () => {
     expect(calculateOverduePenalty(3, 3, 10)).toBe(30);
   });
 
-  it('should return 0 for delays other than 1 or 3', () => {
+  it('should return 0 for delays other than 1 or 3 (default)', () => {
     expect(calculateOverduePenalty(3, 0)).toBe(0);
     expect(calculateOverduePenalty(3, 2)).toBe(0);
     expect(calculateOverduePenalty(3, 5)).toBe(0);
+  });
+
+  it('should use custom thresholds and a custom first-tier penalty', () => {
+    const opts = { day1: 2, points1: 5, day2: 7 };
+    expect(calculateOverduePenalty(3, 2, 10, opts)).toBe(5);
+    expect(calculateOverduePenalty(3, 7, 10, opts)).toBe(30);
+    expect(calculateOverduePenalty(3, 1, 10, opts)).toBe(0);
+    expect(calculateOverduePenalty(3, 3, 10, opts)).toBe(0);
   });
 });
 
